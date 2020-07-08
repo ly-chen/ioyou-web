@@ -11,6 +11,7 @@ import { HomePage } from '../Home'
 import { ProfilePage } from '../Profile'
 import { SignupPage } from '../Signup'
 import { LoginPage } from '../Login'
+import { PostPage } from '../Post'
 import { useFirebase } from '../Firebase'
 import { useSession, SessionContext } from '../Session/'
 
@@ -34,6 +35,9 @@ const MainApp: React.FC = () => {
                 </Route>
                 <Route path={ROUTES.LOGIN}>
                     <LoginPage />
+                </Route>
+                <Route path={ROUTES.POST}>
+                    <PostPage />
                 </Route>
             </Switch>
         </Router>

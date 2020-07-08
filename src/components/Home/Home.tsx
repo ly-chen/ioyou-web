@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { useFirebase, Firebase } from '../Firebase'
 import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card } from 'react-bootstrap'
 import { useSession } from '../Session'
@@ -7,6 +7,9 @@ import styles from './Home.module.css'
 const HomePage: React.FC = () => {
     const firebase = useFirebase()
     const session = useSession()
+
+    const [title, setTitle] = useState<string>('')
+    const [description, setDescription] = useState<string>('')
 
     // Sample write to Firestore
     const accessFirestore = useCallback(async () => {
@@ -22,16 +25,27 @@ const HomePage: React.FC = () => {
     }, [session.auth, firebase])
 
     useEffect(() => {
-        accessFirestore()
-    }, [accessFirestore])
-    console.log()
+        const getPosts = async () => {
+            try {
+                const posts = await (await firebase.db.collection('posts').doc('9rY7uHB1kDUvWj2j6tKY').get()).data();
+                console.log('posts = ', posts);
+                setTitle(posts?.title)
+                setDescription(posts?.desc)
+            } catch (e) {
+                console.log(e)
+            }
+            
+        }
 
-    const feedCard = () => {
+        getPosts()
+    })
+
+    const feedCard = (title: string, description: string) => {
         return (
             <Card style={{ marginBottom: 15 }}>
                 <Card.Body>
-                    <Card.Title>This is a title.</Card.Title>
-                    <Card.Text className={styles.fontLess}>This is some text that takes the shape of a paragraph so you can easily visualize how something like this might look.</Card.Text>
+                <Card.Title>{title}</Card.Title>
+                    <Card.Text className={styles.fontLess}>{description}</Card.Text>
                 </Card.Body>
             </Card>
         )
@@ -68,8 +82,9 @@ const HomePage: React.FC = () => {
                 <Container className={styles.paddingTop}>
                     <div>
                         <h1 style={{ paddingLeft: 22 }}>Feed</h1>
-                        {feedCard()}
                     </div>
+                    {feedCard(title, description)}
+                    <Button href="/post">Create Post</Button>
                 </Container>
             </div>
         )
