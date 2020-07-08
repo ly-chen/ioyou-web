@@ -34,7 +34,7 @@ const HomePage: React.FC = () => {
             } catch (e) {
                 console.log(e)
             }
-            
+
         }
 
         getPosts()
@@ -44,51 +44,56 @@ const HomePage: React.FC = () => {
         return (
             <Card style={{ marginBottom: 15 }}>
                 <Card.Body>
-                <Card.Title>{title}</Card.Title>
+                    <Card.Title>{title}</Card.Title>
                     <Card.Text className={styles.fontLess}>{description}</Card.Text>
                 </Card.Body>
             </Card>
         )
     }
-    if (session.auth) {
-        return (
-            <div>
-                <p>Home</p>
-                <p>Logged in!</p>
-                <Button variant="info" onClick={() => { firebase.doSignOut() }}>Sign Out</Button>
 
-            </div>
-        )
-    } else {
-        //initial screen with no user
-        return (
-            <div>
-                <Navbar bg="light" variant="light">
-                    <Navbar.Brand href="/">
-                        {' '}
+    return (
+        <div>
+            <Navbar bg="light" variant="light">
+                <Navbar.Brand href="/">
+                    {' '}
                             ioyou
                     </Navbar.Brand>
-                    <Nav className="ml-auto">
+                <Nav className="ml-auto">
+                    {session.auth ?
+                        <div>
+                            <Button href="/post" style={{ marginRight: 10 }}>Create Post</Button>
+                            <Button variant="outline-dark" onClick={() => { firebase.doSignOut() }}>
+                                sign out
+                            </Button>
+                        </div>
 
-                        <Button variant="outline-dark" href="/login" style={{ marginRight: 10 }}>
-                            log in
-                        </Button>
+                        :
+                        <div>
+                            <Button variant="outline-dark" href="/login" style={{ marginRight: 10 }}>
+                                log in
+                                </Button>
 
-                        <Button variant="light" href="/signup">
-                            sign up
-                        </Button>
-                    </Nav>
-                </Navbar>
-                <Container className={styles.paddingTop}>
-                    <div>
+                            <Button variant="light" href="/signup">
+                                sign up
+                                </Button>
+                        </div>
+                    }
+
+                </Nav>
+            </Navbar>
+            <Container className={styles.paddingTop}>
+                <Row>
+                    <Col>
                         <h1 style={{ paddingLeft: 22 }}>Feed</h1>
-                    </div>
-                    {feedCard(title, description)}
-                    <Button href="/post">Create Post</Button>
-                </Container>
-            </div>
-        )
-    }
+                    </Col>
+                    <Col>
+
+                    </Col>
+                </Row>
+                {feedCard(title, description)}
+            </Container>
+        </div>
+    )
 }
 
 export { HomePage }

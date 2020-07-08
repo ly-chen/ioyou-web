@@ -6,72 +6,74 @@ import { useSession } from '../Session'
 import styles from './Post.module.css'
 import { firestore } from 'firebase'
 
-
-
-
 const PostPage: React.FC = () => {
+    const firebase = useFirebase()
+    const session = useSession()
 
-    const [title, setTitle] = useState <string>("")
+    const [title, setTitle] = useState<string>("")
     const [description, setDescription] = useState<string>("")
 
+    useEffect(() => {
+        if (!session.auth) {
+            window.location.href = "/"
+        }
+    })
 
-    const handleTitleChange=(event:any)=> {
+    const handleTitleChange = (event: any) => {
         setTitle(event.target.value)
     }
 
-    const handleDescriptionChange=(event:any)=> {
+    const handleDescriptionChange = (event: any) => {
         setDescription(event.target.value)
     }
 
-    const handleSubmit = async (event:any) => {
+    const handleSubmit = async (event: any) => {
         event.preventDefault()
         console.log(title)
         console.log(description)
-        const newPost = {title: title, desc: description}
+        const newPost = { title: title, desc: description }
         await functions().httpsCallable('createPost')(newPost)
         window.location.href = "/"
     }
-        return (
-            <div>
-                <Navbar bg="light" variant="light">
-                    <Navbar.Brand href="/">
-                        {' '}
+
+
+    return (
+        <div>
+            <Navbar bg="light" variant="light">
+                <Navbar.Brand href="/">
+                    {' '}
                             ioyou
                     </Navbar.Brand>
-                    <Nav className="ml-auto">
+                <Nav className="ml-auto">
 
-                        <Button variant="outline-dark" href="/login" style={{ marginRight: 10 }}>
-                            log in
-                        </Button>
-
-                        <Button variant="light" href="/signup">
-                            sign up
-                        </Button>
-                    </Nav>
-                </Navbar>
-                <Container className={styles.paddingTop}>
-                    <div>
-                        <h1 style={{ paddingLeft: 22 }}>Post</h1>
-                        <Form onSubmit={handleSubmit}>
+                    <Button variant="outline-dark" onClick={() => { firebase.doSignOut() }}>
+                        sign out
+                    </Button>
+                </Nav>
+            </Navbar>
+            <Container className={styles.paddingTop}>
+                <div>
+                    <h1 style={{ paddingBottom: 15 }}>Create a new post</h1>
+                    <Form onSubmit={handleSubmit}>
                         <Form.Group controlId="title">
-                            <Form.Label>CREATE POST</Form.Label>
-                            <Form.Control type="text" placeholder="Write a question" onChange={handleTitleChange} />
+                            <Form.Label>Question</Form.Label>
+                            <Form.Control required type="text" placeholder="What's your question?" onChange={handleTitleChange} />
                         </Form.Group>
 
                         <Form.Group controlId="description">
-                            <Form.Label>DESCRIPTION</Form.Label>
-                            <Form.Control as="textarea" rows="3" placeholder="What's your question?" onChange={handleDescriptionChange} />
+                            <Form.Label>Description</Form.Label>
+                            <Form.Control as="textarea" rows={3} placeholder="Add more details if necessary." onChange={handleDescriptionChange} />
                         </Form.Group>
 
-                        <Button variant="primary" type="submit">
-                            POST
+                        <Button variant="primary" type="submit" style={{ marginTop: 15 }}>
+                            Post
                         </Button>
-                        </Form>
-                    </div>
-                </Container>
-            </div>
-        )
-    }
+                    </Form>
+                </div>
+            </Container>
+        </div>
+    )
+}
 
 
 export { PostPage }

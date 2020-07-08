@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Form, InputGroup, FormControl } from 'react-bootstrap'
+import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Form, OverlayTrigger, Popover } from 'react-bootstrap'
 import styles from './Signup.module.css'
+import { auth, firestore } from 'firebase'
 import { AnyCnameRecord } from 'dns';
 
 const SignupPage: React.FC = () => {
@@ -9,20 +10,30 @@ const SignupPage: React.FC = () => {
     const [name, setName] = useState<string>('')
     const [email, setEmail] = useState<string>('')
     const [password, setPassword] = useState<string>('')
-    const [repassword, setRepassword] = useState<string>('')
+    const [err, setErr] = useState<string>('')
+    const [passCheck, setPassCheck] = useState<boolean>(false);
 
-    const handleSubmit = (event: any) => {
+    const handleSubmit = async (event: any) => {
+        event.preventDefault();
         console.log('name = ', name)
         console.log('email = ', email)
         console.log('password = ', password)
         console.log(event.currentTarget)
-        if (event.currentTarget.checkValidity() === false) {
+        if (event.currentTarget.checkValidity() === false || passCheck === false) {
             console.log(validated);
             event.preventDefault();
             event.stopPropagation();
         } else {
-            setValidated(true);
-
+            try {
+                await auth().createUserWithEmailAndPassword(email, password).then(async (newUser) => {
+                    await firestore().collection('users').doc(newUser?.user?.uid).set({ name: name, email: email });
+                })
+                setValidated(true);
+                window.location.href = "/"
+            } catch (e) {
+                console.log(e);
+                setErr(e.message);
+            }
         }
         console.log(validated);
     }
@@ -37,7 +48,15 @@ const SignupPage: React.FC = () => {
     }
 
     const handleChangePassword = (event: any) => {
-        setPassword(event.target.value)
+        var check = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z0-9])(?!.*\s).{8,30}$/;
+        setPassword(event.target.value);
+        if (event.target.value.match(check)) {
+            setPassCheck(true);
+            console.log('passCheck')
+        } else {
+            setPassCheck(false);
+            console.log('failCheck')
+        }
     }
 
     return (
@@ -53,13 +72,22 @@ const SignupPage: React.FC = () => {
                         </Button>
             </Navbar>
             <Container className={styles.paddingTop}>
-                <Form noValidate validated={validated} onSubmit={handleSubmit}>
+                <Form validated={validated} onSubmit={handleSubmit}>
+
+                    <Form.Group controlId="formBasicName">
+                        <Form.Label>Name</Form.Label>
+                        <Form.Control required type="text" placeholder="Jane Doe" onChange={handleChangeName} value={name} />
+                        <Form.Text className="text-muted">
+                            You can pick a username later.
+                        </Form.Text>
+                        <Form.Control.Feedback type="invalid">
+                            Please provide an email.
+                        </Form.Control.Feedback>
+                    </Form.Group>
+
                     <Form.Group controlId="formBasicEmail">
                         <Form.Label>Email address</Form.Label>
-                        <Form.Control required type="email" placeholder="Enter email" onChange={handleChangeEmail} value={email} />
-                        <Form.Text className="text-muted">
-                            We'll never share your email with anyone else.
-                        </Form.Text>
+                        <Form.Control required type="email" placeholder="jdoe@email.com" onChange={handleChangeEmail} value={email} />
                         <Form.Control.Feedback type="invalid">
                             Please provide an email.
                         </Form.Control.Feedback>
@@ -68,9 +96,15 @@ const SignupPage: React.FC = () => {
                     <Form.Group controlId="formBasicPassword">
                         <Form.Label>Password</Form.Label>
                         <Form.Control required type="password" placeholder="Password" onChange={handleChangePassword} value={password} />
-                        <Form.Control.Feedback type="invalid">
-                            Please provide a password.
-                        </Form.Control.Feedback>
+                        {passCheck ?
+                            <Form.Text className="text-success">
+                                Looks good!
+                            </Form.Text>
+                            :
+                            <Form.Text className="text-danger">
+                                At least 8 characters and contain an uppercase letter, lowercase letter, number, and special character.
+                            </Form.Text>
+                        }
                     </Form.Group>
                     <Form.Group controlId="formBasicCheckbox">
                         <Form.Check required type="checkbox" label="I agree to the terms and conditions." />
@@ -79,6 +113,7 @@ const SignupPage: React.FC = () => {
                         Submit
                     </Button>
                 </Form>
+                <p className="text-danger">{err}</p>
             </Container>
         </div>
     )
