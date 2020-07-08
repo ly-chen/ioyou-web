@@ -9,6 +9,8 @@ import {
 import { ROUTES } from '../../constants'
 import { HomePage } from '../Home'
 import { ProfilePage } from '../Profile'
+import { SignupPage } from '../Signup'
+import { LoginPage } from '../Login'
 import { useFirebase } from '../Firebase'
 import { useSession, SessionContext } from '../Session/'
 
@@ -24,8 +26,14 @@ const MainApp: React.FC = () => {
                 {/* <Route path={ROUTES.USERNAME}>
                     <ProfilePage />
                 </Route> */}
-                <Route path={ROUTES.ROOT}>
+                <Route exact path={ROUTES.ROOT}>
                     <HomePage />
+                </Route>
+                <Route path={ROUTES.SIGNUP}>
+                    <SignupPage />
+                </Route>
+                <Route path={ROUTES.LOGIN}>
+                    <LoginPage />
                 </Route>
             </Switch>
         </Router>
