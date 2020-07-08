@@ -8,8 +8,7 @@ const HomePage: React.FC = () => {
     const firebase = useFirebase()
     const session = useSession()
 
-    const [title, setTitle] = useState<string>('')
-    const [description, setDescription] = useState<string>('')
+    const [feedList, setFeedList] = useState<any>(null)
 
     // Sample write to Firestore
     const accessFirestore = useCallback(async () => {
@@ -27,28 +26,85 @@ const HomePage: React.FC = () => {
     useEffect(() => {
         const getPosts = async () => {
             try {
-                const posts = await (await firebase.db.collection('posts').doc('9rY7uHB1kDUvWj2j6tKY').get()).data();
-                console.log('posts = ', posts);
-                setTitle(posts?.title)
-                setDescription(posts?.desc)
+                var docList: any[] = []
+                const posts = await firebase.db.collection('posts').orderBy('timestamp').limit(10).get()
+                if (posts.empty) {
+                    console.log('No matching documents')
+                    return;
+                }
+                posts.forEach(doc => {
+                    console.log(doc.id, '=>', doc.data());
+                    docList = [...docList, { id: doc.id, data: doc.data() }];
+                    console.log('docList = ', docList)
+                });
+                setFeedList(docList)
             } catch (e) {
                 console.log(e)
             }
-
         }
 
-        getPosts()
-    })
+        getPosts();
+    }, [session, firebase])
 
-    const feedCard = (title: string, description: string) => {
+    const feedCard = (data: { title: any; desc?: string; timestamp?: { seconds: number, nanoseconds: number }; author?: string }) => {
         return (
-            <Card style={{ marginBottom: 15 }}>
+            <Card style={{ marginBottom: 20 }}>
                 <Card.Body>
-                    <Card.Title>{title}</Card.Title>
-                    <Card.Text className={styles.fontLess}>{description}</Card.Text>
+                    <Card.Title>{data.title}</Card.Title>
+                    <Card.Text className={styles.fontLess}>{data.desc}</Card.Text>
                 </Card.Body>
             </Card>
         )
+    }
+
+    const feedLoadingView = () => {
+        return (
+            <div>
+
+                <Card style={{ marginBottom: 20 }}>
+                    <Card.Body>
+                        <Card.Title></Card.Title>
+                        <Card.Text></Card.Text>
+                        <Spinner animation="border" />
+                    </Card.Body>
+                </Card>
+                <Card style={{ marginBottom: 20 }}>
+                    <Card.Body>
+                        <Card.Title></Card.Title>
+                        <Card.Text></Card.Text>
+                        <Spinner animation="border" />
+                    </Card.Body>
+                </Card>
+                <Card style={{ marginBottom: 20 }}>
+                    <Card.Body>
+                        <Card.Title></Card.Title>
+                        <Card.Text></Card.Text>
+                        <Spinner animation="border" />
+                    </Card.Body>
+                </Card>
+                <Card style={{ marginBottom: 20 }}>
+                    <Card.Body>
+                        <Card.Title></Card.Title>
+                        <Card.Text></Card.Text>
+                        <Spinner animation="border" />
+                    </Card.Body>
+                </Card>
+                <Card style={{ marginBottom: 20 }}>
+                    <Card.Body>
+                        <Card.Title></Card.Title>
+                        <Card.Text></Card.Text>
+                        <Spinner animation="border" />
+                    </Card.Body>
+                </Card>
+            </div>
+
+        )
+    }
+
+    const feedView = () => {
+        const feedItems = feedList.map((object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string } }) => <div key={object.id}>{feedCard(object.data)}</div>
+        )
+        return feedItems
     }
 
     return (
@@ -90,7 +146,12 @@ const HomePage: React.FC = () => {
 
                     </Col>
                 </Row>
-                {feedCard(title, description)}
+                {
+                    feedList ?
+                        feedView()
+                        :
+                        feedLoadingView()
+                }
             </Container>
         </div>
     )

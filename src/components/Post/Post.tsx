@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useFirebase, Firebase } from '../Firebase'
-import { functions } from 'firebase'
+import { functions, auth, firestore } from 'firebase'
 import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card, Form } from 'react-bootstrap'
 import { useSession } from '../Session'
 import styles from './Post.module.css'
-import { firestore } from 'firebase'
 
 const PostPage: React.FC = () => {
     const firebase = useFirebase()
@@ -31,7 +30,7 @@ const PostPage: React.FC = () => {
         event.preventDefault()
         console.log(title)
         console.log(description)
-        const newPost = { title: title, desc: description }
+        const newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid }
         await functions().httpsCallable('createPost')(newPost)
         window.location.href = "/"
     }
