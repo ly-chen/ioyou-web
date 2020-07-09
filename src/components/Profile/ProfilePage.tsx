@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react'
 import { useParams } from 'react-router-dom';
 import { useFirebase, Firebase } from '../Firebase'
 import { firestore } from 'firebase'
-import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card } from 'react-bootstrap'
+import { Navbar, Nav, Button, DropdownButton, Dropdown, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card } from 'react-bootstrap'
 import { useSession } from '../Session'
 import styles from './Profile.module.css'
 
@@ -13,6 +13,9 @@ const ProfilePage: React.FC = () => {
 
     const [user, setUser] = useState<any>(null);
     const [userLoading, setUserLoading] = useState<boolean>(true);
+
+    const [userSelf, setUserSelf] = useState<boolean>(false);
+    const [editSubjects, setEditSubjects] = useState<boolean>(false);
 
     useEffect(() => {
         const getUser = async () => {
@@ -27,7 +30,96 @@ const ProfilePage: React.FC = () => {
             }
         }
         getUser();
+
+        if (session.auth) {
+            const getSelf = async () => {
+                const self = await firestore().collection('users').doc(session?.auth?.uid).get()
+                if (self?.data()?.username == username) {
+                    setUserSelf(true);
+                }
+            }
+            getSelf();
+        }
+
     }, [session, firebase])
+
+    const editSubjectsView = () => {
+        return (
+            <Row style={{ paddingTop: 15, paddingLeft: 15 }}>
+                <Button variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>Arts</Button>
+                <Button variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>Business</Button>
+                <DropdownButton id="cs" title="Computer Science" variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>
+                    <Dropdown.Item>
+                        Languages
+                    </Dropdown.Item>
+                    <Dropdown.Item>
+                        Organization and OS
+                    </Dropdown.Item>
+                    <Dropdown.Item>
+                        Other
+                    </Dropdown.Item>
+                </DropdownButton>
+                <Button variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>Economics</Button>
+                <Button variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>Finance</Button>
+                <Button variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>History</Button>
+                <Button variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>Humanities</Button>
+                <DropdownButton id="lang" title="Languages" variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>
+                    <Dropdown.Item>
+                        French
+                    </Dropdown.Item>
+                    <Dropdown.Item>
+                        Mandarin
+                    </Dropdown.Item>
+                    <Dropdown.Item>
+                        Spanish
+                    </Dropdown.Item>
+                    <Dropdown.Item>
+                        Other
+                    </Dropdown.Item>
+                </DropdownButton>
+                <DropdownButton id="math" title="Mathematics" variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>
+                    <Dropdown.Item>
+                        Calculus
+                    </Dropdown.Item>
+                    <Dropdown.Item>
+                        Multi-variable
+                    </Dropdown.Item>
+                    <Dropdown.Item>
+                        Linear Algebra
+                    </Dropdown.Item>
+                    <Dropdown.Item>
+                        Other
+                    </Dropdown.Item>
+                </DropdownButton>
+                <DropdownButton id="sci" title="Sciences" variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>
+                    <Dropdown.Item>
+                        Biology
+                    </Dropdown.Item>
+                    <Dropdown.Item>
+                        Chemistry
+                    </Dropdown.Item>
+                    <Dropdown.Item>
+                        Physics
+                    </Dropdown.Item>
+                    <Dropdown.Item>
+                        Other
+                    </Dropdown.Item>
+                </DropdownButton>
+                <DropdownButton id="lang" title="Social Sciences" variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>
+                    <Dropdown.Item>
+                        Psychology
+                    </Dropdown.Item>
+                    <Dropdown.Item>
+                        Sociology
+                    </Dropdown.Item>
+                    <Dropdown.Item>
+                        Other
+                    </Dropdown.Item>
+                </DropdownButton>
+                <Button variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>Other</Button>
+            </Row>
+        )
+    }
 
     return (
         <div>
@@ -75,12 +167,33 @@ const ProfilePage: React.FC = () => {
                     <Container className={styles.paddingTop}>
                         <Card>
                             <Card.Body>
-                                <h2>@{username}</h2>
-                                <h2>{user.name}</h2>
+                                <Row>
+                                    <Col>
+                                        <h2>@{username}</h2>
+                                        <h2>{user.name}</h2>
+                                    </Col>
+                                    <Col>
+                                        <h3>Credits: </h3>
+                                    </Col>
+                                </Row>
+
 
                                 <hr></hr>
 
-                                <h3>Subjects</h3>
+                                <Row style={{ paddingLeft: 15 }}>
+                                    <h3 style={{ paddingRight: 15 }}>Subjects</h3>
+                                    {userSelf ?
+                                        <Button onClick={() => { setEditSubjects(true) }}>Edit</Button>
+                                        :
+                                        <div></div>
+                                    }
+                                </Row>
+                                {
+                                    editSubjects ?
+                                        editSubjectsView()
+                                        :
+                                        <div></div>
+                                }
                             </Card.Body>
 
                         </Card>
