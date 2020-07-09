@@ -42,7 +42,7 @@ const SignupPage: React.FC = () => {
                         console.log('this is triggered 2')
                         const uid = newUser?.user?.uid
                         await firestore().collection('users').doc(uid).set({ name: name, username: username, email: email }).then(() => {
-                            window.location.href = `/${username}`
+                            window.location.href = `/user/${username}`
                         })
                     }
                     setValidated(true);
