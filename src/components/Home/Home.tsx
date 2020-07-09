@@ -46,14 +46,16 @@ const HomePage: React.FC = () => {
         getPosts();
     }, [session, firebase])
 
-    const feedCard = (data: { title: any; desc?: string; timestamp?: { seconds: number, nanoseconds: number }; author?: string }) => {
+    const feedCard = (object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string } }) => {
         return (
-            <Card style={{ marginBottom: 20 }}>
-                <Card.Body>
-                    <Card.Title>{data.title}</Card.Title>
-                    <Card.Text className={styles.fontLess}>{data.desc}</Card.Text>
-                </Card.Body>
-            </Card>
+            <a href={`/question/${object.id}`}>
+                <Card style={{ marginBottom: 20 }}>
+                    <Card.Body>
+                        <Card.Title>{object.data.title}</Card.Title>
+                        <Card.Text className={styles.fontLess}> {object.data.desc}</Card.Text>
+                    </Card.Body>
+                </Card>
+            </a>
         )
     }
 
@@ -102,7 +104,7 @@ const HomePage: React.FC = () => {
     }
 
     const feedView = () => {
-        const feedItems = feedList.map((object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string } }) => <div key={object.id}>{feedCard(object.data)}</div>
+        const feedItems = feedList.map((object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string } }) => <div key={object.id}>{feedCard(object)}</div>
         )
         return feedItems
     }

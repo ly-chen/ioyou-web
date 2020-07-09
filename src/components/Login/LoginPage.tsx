@@ -1,15 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Form, InputGroup, FormControl } from 'react-bootstrap'
 import { useFirebase, Firebase } from '../Firebase'
+import { useSession } from '../Session'
 import styles from './Login.module.css'
 
 const LoginPage: React.FC = () => {
     const firebase = useFirebase()
+    const session = useSession()
 
     const [validated, setValidated] = useState<boolean>(false);
     const [email, setEmail] = useState<string>('')
     const [password, setPassword] = useState<string>('')
     const [err, setErr] = useState<string>('')
+
+    useEffect(() => {
+        if (session.auth && validated) {
+            window.location.href = '/'
+        }
+    }, [session, firebase])
 
     const handleSubmit = async (event: any) => {
         event.preventDefault();
