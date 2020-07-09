@@ -39,8 +39,15 @@ const ProfilePage: React.FC = () => {
                 <Nav className="ml-auto">
                     {session.auth ?
                         <div>
-                            <Button href="/post" style={{ marginRight: 10 }}>Create Post</Button>
-                            <Button variant="outline-dark" onClick={() => { firebase.doSignOut() }}>
+                            <Button variant="light" onClick={async () => {
+                                const user = await firebase.db.collection('users').doc(session?.auth?.uid).get()
+                                const username = user?.data()?.username
+                                window.location.href = `/user/${username}`
+                            }} style={{ marginRight: 10 }}>
+                                Profile
+                            </Button>
+                            <Button href="/post" variant="outline-dark" style={{ marginRight: 10 }}>Create Post</Button>
+                            <Button variant="light" onClick={() => { firebase.doSignOut() }}>
                                 sign out
                             </Button>
                         </div>
@@ -66,8 +73,18 @@ const ProfilePage: React.FC = () => {
                 :
                 user ?
                     <Container className={styles.paddingTop}>
-                        <h2>@{username}</h2>
-                        <h2>{user.name}</h2>
+                        <Card>
+                            <Card.Body>
+                                <h2>@{username}</h2>
+                                <h2>{user.name}</h2>
+
+                                <hr></hr>
+
+                                <h3>Subjects</h3>
+                            </Card.Body>
+
+                        </Card>
+
                     </Container>
                     :
                     <Container className={styles.paddingTop}>

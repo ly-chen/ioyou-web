@@ -24,6 +24,7 @@ const HomePage: React.FC = () => {
     }, [session.auth, firebase])
 
     useEffect(() => {
+        //retrieves the most recent 10 posts
         const getPosts = async () => {
             try {
                 var docList: any[] = []
@@ -46,6 +47,7 @@ const HomePage: React.FC = () => {
         getPosts();
     }, [session, firebase])
 
+    //a feed object
     const feedCard = (object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string } }) => {
         return (
             <a href={`/question/${object.id}`}>
@@ -59,6 +61,7 @@ const HomePage: React.FC = () => {
         )
     }
 
+    //loading animation while retrieving feed
     const feedLoadingView = () => {
         return (
             <div>
@@ -103,6 +106,7 @@ const HomePage: React.FC = () => {
         )
     }
 
+    //list of feed objects
     const feedView = () => {
         const feedItems = feedList.map((object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string } }) => <div key={object.id}>{feedCard(object)}</div>
         )
@@ -119,8 +123,15 @@ const HomePage: React.FC = () => {
                 <Nav className="ml-auto">
                     {session.auth ?
                         <div>
-                            <Button href="/post" style={{ marginRight: 10 }}>Create Post</Button>
-                            <Button variant="outline-dark" onClick={() => { firebase.doSignOut() }}>
+                            <Button variant="light" onClick={async () => {
+                                const user = await firebase.db.collection('users').doc(session?.auth?.uid).get()
+                                const username = user?.data()?.username
+                                window.location.href = `/user/${username}`
+                            }} style={{ marginRight: 10 }}>
+                                Profile
+                            </Button>
+                            <Button href="/post" variant="outline-dark" style={{ marginRight: 10 }}>Create Post</Button>
+                            <Button variant="light" onClick={() => { firebase.doSignOut() }}>
                                 sign out
                             </Button>
                         </div>
@@ -142,7 +153,7 @@ const HomePage: React.FC = () => {
             <Container className={styles.paddingTop}>
                 <Row>
                     <Col>
-                        <h1 style={{ paddingLeft: 22 }}>Feed</h1>
+                        <h1 style={{ paddingLeft: 22, paddingBottom: 15 }}>Feed</h1>
                     </Col>
                     <Col>
 

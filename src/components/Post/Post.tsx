@@ -44,8 +44,14 @@ const PostPage: React.FC = () => {
                             ioyou
                     </Navbar.Brand>
                 <Nav className="ml-auto">
-
-                    <Button variant="outline-dark" onClick={() => { firebase.doSignOut() }}>
+                    <Button variant="light" onClick={async () => {
+                        const user = await firebase.db.collection('users').doc(session?.auth?.uid).get()
+                        const username = user?.data()?.username
+                        window.location.href = `/user/${username}`
+                    }} style={{ marginRight: 10 }}>
+                        Profile
+                    </Button>
+                    <Button variant="light" onClick={() => { firebase.doSignOut() }}>
                         sign out
                     </Button>
                 </Nav>

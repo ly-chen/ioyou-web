@@ -46,4 +46,4 @@ class Firebase {
 
 }
 
-export { Firebase}
+export { Firebase }

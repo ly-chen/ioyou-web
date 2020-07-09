@@ -3,7 +3,7 @@ const ROUTES = {
     SIGNUP: "/signup",
     LOGIN: "/login",
     POST: "/post",
-    USERNAME: "/users/:username",
+    USERNAME: "/user/:username",
     COMMENTS: "/question/:postid"
 }
 
