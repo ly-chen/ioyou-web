@@ -28,7 +28,7 @@ const HomePage: React.FC = () => {
         const getPosts = async () => {
             try {
                 var docList: any[] = []
-                const posts = await firebase.db.collection('posts').orderBy('timestamp').limit(10).get()
+                const posts = await firebase.db.collection('posts').orderBy('timestamp.seconds',"desc").limit(10).get()
                 if (posts.empty) {
                     console.log('No matching documents')
                     return;
@@ -50,14 +50,18 @@ const HomePage: React.FC = () => {
     //a feed object
     const feedCard = (object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string } }) => {
         return (
-            <a href={`/question/${object.id}`}>
+            
                 <Card style={{ marginBottom: 20 }}>
                     <Card.Body>
+                    <a href={`/question/${object.id}`}>
                         <Card.Title>{object.data.title}</Card.Title>
+                        </a>
                         <Card.Text className={styles.fontLess}> {object.data.desc}</Card.Text>
+                        <Card.Text className={styles.fontLess}> {object.data.timestamp.seconds}</Card.Text>
                     </Card.Body>
                 </Card>
-            </a>
+                
+            //
         )
     }
 
