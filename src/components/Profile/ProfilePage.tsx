@@ -17,6 +17,15 @@ const ProfilePage: React.FC = () => {
     const [userSelf, setUserSelf] = useState<boolean>(false);
     const [editSubjects, setEditSubjects] = useState<boolean>(false);
 
+    const [change, setChange] = useState<boolean>(false);
+    const [lang, setLang] = useState<boolean>(false)
+    const [sci, setSci] = useState<boolean>(false)
+    const [ss, setSS] = useState<boolean>(false);
+
+
+    //list of subjects
+    const [actives, setActives] = useState<any>({});
+
     useEffect(() => {
         const getUser = async () => {
             const results = await firestore().collection('users').where('username', '==', username).limit(1).get();
@@ -24,8 +33,26 @@ const ProfilePage: React.FC = () => {
                 console.log('empty');
                 setUserLoading(false);
             } else {
-                setUser(results.docs[0].data())
-                console.log(results.docs[0].data())
+                const userResults = await results.docs[0].data()
+                setUser(userResults)
+                setActives(userResults.actives)
+
+                if (userResults.actives['French'] || userResults.actives['Mandarin'] || userResults.actives['Spanish'] || userResults.actives['Languages (General)']) {
+                    setLang(true)
+                    console.log('lang = true')
+                }
+
+                if (userResults.actives['Biology'] || userResults.actives['Chemistry'] || userResults.actives['Physics'] || userResults.actives['Sciences (General)']) {
+                    setSci(true)
+                }
+
+                if (userResults.actives['Psychology'] || userResults.actives['Sociology'] || userResults.actives['Social Sciences (General)']) {
+                    setSS(true)
+                }
+
+
+                console.log(userResults)
+                console.log('user.actives =', userResults.actives)
                 setUserLoading(false);
             }
         }
@@ -43,80 +70,233 @@ const ProfilePage: React.FC = () => {
 
     }, [session, firebase])
 
-    const editSubjectsView = () => {
+    const subjectsView = () => {
+        console.log('actives = ', actives)
+        const subjectObjects = Object.entries(actives).map(([keyName, keyIndex]) =>
+            // use keyName to get current key's name
+            // and a[keyName] to get its value
+            <div key={keyName}>
+                {actives[keyName] ?
+                    <Button active variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>{keyName}</Button>
+                    :
+                    <div></div>
+                }
+
+            </div>
+        )
+        console.log('subjectObjects = ', subjectObjects)
         return (
             <Row style={{ paddingTop: 15, paddingLeft: 15 }}>
-                <Button variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>Arts</Button>
-                <Button variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>Business</Button>
-                <DropdownButton id="cs" title="Computer Science" variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>
-                    <Dropdown.Item>
-                        Languages
-                    </Dropdown.Item>
-                    <Dropdown.Item>
-                        Organization and OS
-                    </Dropdown.Item>
-                    <Dropdown.Item>
-                        Other
-                    </Dropdown.Item>
-                </DropdownButton>
-                <Button variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>Economics</Button>
-                <Button variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>Finance</Button>
-                <Button variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>History</Button>
-                <Button variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>Humanities</Button>
-                <DropdownButton id="lang" title="Languages" variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>
-                    <Dropdown.Item>
+                {subjectObjects}
+            </Row>
+        )
+    }
+
+    const subjectEdit = (subject: string) => {
+        let activesEdit = actives;
+        if (actives[subject] == true) {
+            activesEdit[subject] = false;
+            setActives(activesEdit)
+        } else {
+            activesEdit[subject] = true;
+            setActives(activesEdit);
+        }
+    }
+
+
+    const editSubjectsView = () => {
+
+        var bus = actives['Business']
+        return (
+            <Row style={{ paddingTop: 15, paddingLeft: 15 }}>
+                <Button active={actives['Arts']} variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}
+                    onClick={() => {
+                        subjectEdit('Arts')
+                        setChange(!change);
+                    }}
+                >
+                    Arts
+                </Button>
+                <Button active={actives['Business']} variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}
+                    onClick={() => {
+                        subjectEdit('Business')
+                        setChange(!change);
+                    }}
+                >
+                    Business</Button>
+                <Button variant='outline-dark' active={actives['Computer Science']} style={{ marginRight: 15, marginBottom: 15 }}
+                    onClick={() => {
+                        subjectEdit('Computer Science')
+                        setChange(!change);
+                    }}
+                >
+                    Computer Science
+                </Button>
+                <Button variant='outline-dark' active={actives['Economics']} style={{ marginRight: 15, marginBottom: 15 }}
+                    onClick={() => {
+                        subjectEdit('Economics')
+                        setChange(!change);
+                    }}
+                >
+                    Economics</Button>
+                <Button variant='outline-dark' active={actives['Finance']} style={{ marginRight: 15, marginBottom: 15 }}
+                    onClick={() => {
+                        subjectEdit('Finance')
+                        setChange(!change);
+                    }}
+                >
+                    Finance</Button>
+                <Button variant='outline-dark' active={actives['History']} style={{ marginRight: 15, marginBottom: 15 }}
+                    onClick={() => {
+                        subjectEdit('History')
+                        setChange(!change);
+                    }}
+                >
+                    History</Button>
+                <Button variant='outline-dark' active={actives['Humanities']} style={{ marginRight: 15, marginBottom: 15 }}
+                    onClick={() => {
+                        subjectEdit('Humanities')
+                        setChange(!change);
+                    }}
+                >
+                    Humanities</Button>
+                <DropdownButton id="lang" title="Languages" variant={lang ? 'dark' : 'outline-dark'} style={{ marginRight: 15, marginBottom: 15 }}>
+                    <Dropdown.Item active={actives['French']} onClick={() => {
+                        subjectEdit('French')
+                        setChange(!change);
+                        if (actives['French'] || actives['Mandarin'] || actives['Spanish'] || actives['Languages (General)']) {
+                            setLang(true)
+                        } else {
+                            setLang(false)
+                        }
+                    }}>
                         French
                     </Dropdown.Item>
-                    <Dropdown.Item>
+                    <Dropdown.Item active={actives['Mandarin']} onClick={() => {
+                        subjectEdit('Mandarin')
+                        setChange(!change);
+                        if (actives['French'] || actives['Mandarin'] || actives['Spanish'] || actives['Languages (General)']) {
+                            setLang(true)
+                        } else {
+                            setLang(false)
+                        }
+                    }}>
                         Mandarin
-                    </Dropdown.Item>
-                    <Dropdown.Item>
+                    </Dropdown.Item >
+                    <Dropdown.Item active={actives['Spanish']} onClick={() => {
+                        subjectEdit('Spanish')
+                        setChange(!change);
+                        if (actives['French'] || actives['Mandarin'] || actives['Spanish'] || actives['Languages (General)']) {
+                            setLang(true)
+                        } else {
+                            setLang(false)
+                        }
+                    }}>
                         Spanish
                     </Dropdown.Item>
-                    <Dropdown.Item>
-                        Other
+                    <Dropdown.Item active={actives['Languages (General)']} onClick={() => {
+                        subjectEdit('Languages (General)')
+                        setChange(!change);
+                        if (actives['French'] || actives['Mandarin'] || actives['Spanish'] || actives['Languages (General)']) {
+                            setLang(true)
+                        } else {
+                            setLang(false)
+                        }
+                    }}>
+                        General
                     </Dropdown.Item>
                 </DropdownButton>
-                <DropdownButton id="math" title="Mathematics" variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>
-                    <Dropdown.Item>
-                        Calculus
-                    </Dropdown.Item>
-                    <Dropdown.Item>
-                        Multi-variable
-                    </Dropdown.Item>
-                    <Dropdown.Item>
-                        Linear Algebra
-                    </Dropdown.Item>
-                    <Dropdown.Item>
-                        Other
-                    </Dropdown.Item>
-                </DropdownButton>
-                <DropdownButton id="sci" title="Sciences" variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>
-                    <Dropdown.Item>
+                <Button variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }} active={actives['Mathematics']} onClick={() => {
+                    subjectEdit('Mathematics')
+                    setChange(!change);
+                }}>
+                    Mathematics
+                </Button>
+                <DropdownButton id="sci" title="Sciences" variant={sci ? 'dark' : 'outline-dark'} style={{ marginRight: 15, marginBottom: 15 }}>
+                    <Dropdown.Item active={actives['Biology']} onClick={() => {
+                        subjectEdit('Biology')
+                        setChange(!change);
+                        if (actives['Biology'] || actives['Chemistry'] || actives['Physics'] || actives['Sciences (General)']) {
+                            setSci(true)
+                        } else {
+                            setSci(false)
+                        }
+                    }}>
                         Biology
                     </Dropdown.Item>
-                    <Dropdown.Item>
+                    <Dropdown.Item active={actives['Chemistry']} onClick={() => {
+                        subjectEdit('Chemistry')
+                        setChange(!change);
+                        if (actives['Biology'] || actives['Chemistry'] || actives['Physics'] || actives['Sciences (General)']) {
+                            setSci(true)
+                        } else {
+                            setSci(false)
+                        }
+                    }}>
                         Chemistry
                     </Dropdown.Item>
-                    <Dropdown.Item>
+                    <Dropdown.Item active={actives['Physics']} onClick={() => {
+                        subjectEdit('Physics')
+                        setChange(!change);
+                        if (actives['Biology'] || actives['Chemistry'] || actives['Physics'] || actives['Sciences (General)']) {
+                            setSci(true)
+                        } else {
+                            setSci(false)
+                        }
+                    }}>
                         Physics
                     </Dropdown.Item>
-                    <Dropdown.Item>
-                        Other
+                    <Dropdown.Item active={actives['Sciences (General)']} onClick={() => {
+                        subjectEdit('Sciences (General)')
+                        setChange(!change);
+                        if (actives['Biology'] || actives['Chemistry'] || actives['Physics'] || actives['Sciences (General)']) {
+                            setSci(true)
+                        } else {
+                            setSci(false)
+                        }
+                    }}>
+                        General
                     </Dropdown.Item>
                 </DropdownButton>
-                <DropdownButton id="lang" title="Social Sciences" variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>
-                    <Dropdown.Item>
+                <DropdownButton id="lang" title="Social Sciences" variant={ss ? 'dark' : 'outline-dark'} style={{ marginRight: 15, marginBottom: 15 }} >
+                    <Dropdown.Item active={actives['Psychology']} onClick={() => {
+                        subjectEdit('Psychology')
+                        setChange(!change);
+                        if (actives['Psychology'] || actives['Sociology'] || actives['Social Sciences (General)']) {
+                            setSS(true)
+                        } else {
+                            setSS(false)
+                        }
+                    }}>
                         Psychology
                     </Dropdown.Item>
-                    <Dropdown.Item>
+                    <Dropdown.Item active={actives['Sociology']} onClick={() => {
+                        subjectEdit('Sociology')
+                        setChange(!change);
+                        if (actives['Psychology'] || actives['Sociology'] || actives['Social Sciences (General)']) {
+                            setSS(true)
+                        } else {
+                            setSS(false)
+                        }
+                    }}>
                         Sociology
                     </Dropdown.Item>
-                    <Dropdown.Item>
-                        Other
+                    <Dropdown.Item active={actives['Social Sciences (General)']} onClick={() => {
+                        subjectEdit('Social Sciences (General)')
+                        setChange(!change);
+                        if (actives['Psychology'] || actives['Sociology'] || actives['Social Sciences (General)']) {
+                            setSS(true)
+                        } else {
+                            setSS(false)
+                        }
+                    }}>
+                        General
                     </Dropdown.Item>
                 </DropdownButton>
-                <Button variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>Other</Button>
+                <Button variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }} active={actives['General']} onClick={() => {
+                    subjectEdit('General')
+                    setChange(!change);
+                }}>General</Button>
             </Row>
         )
     }
@@ -183,7 +363,14 @@ const ProfilePage: React.FC = () => {
                                 <Row style={{ paddingLeft: 15 }}>
                                     <h3 style={{ paddingRight: 15 }}>Subjects</h3>
                                     {userSelf ?
-                                        <Button onClick={() => { setEditSubjects(true) }}>Edit</Button>
+                                        editSubjects ?
+                                            <Button onClick={async () => {
+                                                setEditSubjects(false)
+                                                await firestore().collection('users').doc(session.auth?.uid).update({ actives: actives })
+                                                console.log('saved actives = ', actives)
+                                            }}>Save</Button>
+                                            :
+                                            <Button onClick={() => { setEditSubjects(true) }}>Edit</Button>
                                         :
                                         <div></div>
                                     }
@@ -192,7 +379,7 @@ const ProfilePage: React.FC = () => {
                                     editSubjects ?
                                         editSubjectsView()
                                         :
-                                        <div></div>
+                                        subjectsView()
                                 }
                             </Card.Body>
 

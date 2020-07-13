@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { useFirebase, Firebase } from '../Firebase'
-import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card } from 'react-bootstrap'
+import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card, Tabs, Tab } from 'react-bootstrap'
 import { useSession } from '../Session'
 import styles from './Home.module.css'
 
@@ -28,7 +28,7 @@ const HomePage: React.FC = () => {
         const getPosts = async () => {
             try {
                 var docList: any[] = []
-                const posts = await firebase.db.collection('posts').orderBy('timestamp.seconds',"desc").limit(10).get()
+                const posts = await firebase.db.collection('posts').orderBy('timestamp.seconds', "desc").limit(10).get()
                 if (posts.empty) {
                     console.log('No matching documents')
                     return;
@@ -50,17 +50,17 @@ const HomePage: React.FC = () => {
     //a feed object
     const feedCard = (object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string } }) => {
         return (
-            
-                <Card style={{ marginBottom: 20 }}>
-                    <Card.Body>
+
+            <Card style={{ marginBottom: 20 }}>
+                <Card.Body>
                     <a href={`/question/${object.id}`}>
                         <Card.Title>{object.data.title}</Card.Title>
-                        </a>
-                        <Card.Text className={styles.fontLess}> {object.data.desc}</Card.Text>
-                        <Card.Text className={styles.fontLess}> {object.data.timestamp.seconds}</Card.Text>
-                    </Card.Body>
-                </Card>
-                
+                    </a>
+                    <Card.Text className={styles.fontLess}> {object.data.desc}</Card.Text>
+                    <Card.Text className={styles.fontLess}> {object.data.timestamp.seconds}</Card.Text>
+                </Card.Body>
+            </Card>
+
             //
         )
     }
@@ -68,7 +68,7 @@ const HomePage: React.FC = () => {
     //loading animation while retrieving feed
     const feedLoadingView = () => {
         return (
-            <div>
+            <div style={{ paddingTop: 15 }}>
 
                 <Card style={{ marginBottom: 20 }}>
                     <Card.Body>
@@ -112,7 +112,7 @@ const HomePage: React.FC = () => {
 
     //list of feed objects
     const feedView = () => {
-        const feedItems = feedList.map((object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string } }) => <div key={object.id}>{feedCard(object)}</div>
+        const feedItems = feedList.map((object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string } }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
         )
         return feedItems
     }
@@ -163,12 +163,40 @@ const HomePage: React.FC = () => {
 
                     </Col>
                 </Row>
-                {
-                    feedList ?
-                        feedView()
-                        :
-                        feedLoadingView()
-                }
+                <Tabs defaultActiveKey="Home" id="feed-nav">
+                    <Tab eventKey="All" title="All">
+                        {
+                            feedList ?
+                                feedView()
+                                :
+                                feedLoadingView()
+                        }
+                    </Tab>
+                    <Tab eventKey="Home" title="Home">
+                        {
+                            feedList ?
+                                feedView()
+                                :
+                                feedLoadingView()
+                        }
+                    </Tab>
+                    <Tab eventKey="Academic" title="Academic">
+                        {
+                            feedList ?
+                                feedView()
+                                :
+                                feedLoadingView()
+                        }
+                    </Tab>
+                    <Tab eventKey="Bulletin" title="Bulletin">
+                        {
+                            feedList ?
+                                feedView()
+                                :
+                                feedLoadingView()
+                        }
+                    </Tab>
+                </Tabs>
             </Container>
         </div>
     )
