@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Form, OverlayTrigger, Popover } from 'react-bootstrap'
+import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Form, OverlayTrigger, Spinner } from 'react-bootstrap'
 import styles from './Signup.module.css'
 import { auth, firestore } from 'firebase'
 import { useFirebase, Firebase } from '../Firebase'
@@ -19,8 +19,11 @@ const SignupPage: React.FC = () => {
     const [usernameErr, setUsernameErr] = useState<string>('')
     const [passCheck, setPassCheck] = useState<boolean>(false);
 
+    const [handling, setHandling] = useState<boolean>(false);
+
     const handleSubmit = async (event: any) => {
         event.preventDefault();
+        setHandling(true)
         console.log('name = ', name)
         console.log('username = ', username)
         console.log('email = ', email)
@@ -143,9 +146,23 @@ const SignupPage: React.FC = () => {
                     <Form.Group controlId="formBasicCheckbox">
                         <Form.Check required type="checkbox" label="I agree to the terms and conditions." />
                     </Form.Group>
-                    <Button variant="primary" type="submit">
-                        Submit
+
+                    {handling ?
+                        <Button variant="primary" disabled>
+                            <Spinner
+                                as="span"
+                                animation="border"
+                                size="sm"
+                                role="status"
+                                aria-hidden="true"
+                            />
+                        </Button>
+                        :
+                        <Button variant="primary" type="submit">
+                            Submit
                     </Button>
+                    }
+
                 </Form>
                 <p className="text-danger">{err}</p>
             </Container>
