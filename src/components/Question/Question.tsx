@@ -16,6 +16,34 @@ const QuestionPage: React.FC = (props) => {
     const [post, setPost] = useState<any>(null);
 
     const [answer, setAnswer] = useState<string>("")
+    const [comments, setComments] = useState<any>(null)
+
+    const [loadingDone, setLoadingDone] = useState<boolean>(false);
+    const [commentsDone, setCommentsDone] = useState<boolean>(false);
+
+    const getComments = async () => {
+        try {
+            var docList: any[] = []
+            const commentsList = await firebase.db.collection('comments').where('parent', '==', postid).get()
+
+
+            if (commentsList.empty || commentsList == null) {
+                console.log('No matching documents')
+                setCommentsDone(true)
+                return;
+            }
+            commentsList.forEach(doc => {
+                docList = [...docList, { id: doc.id, data: doc.data() }];
+            });
+
+            setComments(docList)
+            console.log('docList = ', docList)
+            setCommentsDone(true)
+        } catch (e) {
+            console.log(e)
+            setCommentsDone(true)
+        }
+    }
 
     useEffect(() => {
         if (session.auth) {
@@ -28,9 +56,18 @@ const QuestionPage: React.FC = (props) => {
 
 
         const getPost = async () => {
-            const postDoc = await (await firestore().collection('posts').doc(postid).get()).data()
-            console.log('postDoc = ', postDoc)
-            setPost(postDoc)
+            try {
+                const postDoc = await (await firestore().collection('posts').doc(postid).get()).data()
+                console.log('postDoc = ', postDoc)
+
+                setPost(postDoc)
+                getComments()
+                setLoadingDone(true)
+            } catch (e) {
+                console.log(e)
+                setLoadingDone(true)
+            }
+
         }
 
         getPost();
@@ -44,7 +81,34 @@ const QuestionPage: React.FC = (props) => {
     const handleSubmit = async (event: any) => {
         event.preventDefault()
         console.log(answer)
-        const newPost = { answer: answer, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, authorName: self.username }
+        const newComment = { comment: answer, parent: postid, thread: postid, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, authorName: self.username }
+        await firestore().collection('comments').doc().set(newComment).then(() => {
+            getComments()
+        })
+    }
+
+    //a feed object
+    const feedCard = (object: { id: string | number | undefined; data: { comment: string; timestamp: { seconds: number, nanoseconds: number }; author: string; authorName: string; parent: string; thread: string } }) => {
+
+        return (
+
+            <Card style={{ marginBottom: 20 }}>
+                <Card.Body>
+                    <Card.Title>{`@${object.data.authorName}`}</Card.Title>
+                    <Card.Text className={styles.fontLess}> {object.data.comment}</Card.Text>
+                    <Card.Text className={styles.fontLess}>{object.data.timestamp.seconds}</Card.Text>
+                </Card.Body>
+            </Card>
+
+            //
+        )
+    }
+
+    //list of feed objects
+    const feedView = (feedList: { id: string | number | undefined; data: { comment: string; timestamp: { seconds: number; nanoseconds: number }; author: string; authorName: string; parent: string; thread: string } }[]) => {
+        const feedItems = feedList.map((object: { id: string | number | undefined; data: { comment: string; timestamp: { seconds: number, nanoseconds: number }; author: string; authorName: string; parent: string; thread: string } }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
+        )
+        return feedItems
     }
 
 
@@ -68,47 +132,56 @@ const QuestionPage: React.FC = (props) => {
                     </Button>
                 </Nav>
             </Navbar>
-            <Container className={styles.paddingTop}>
-                <Card style={{ marginBottom: 30 }}>
-                    <Card.Body>
-                        <Card.Title>{post?.title}</Card.Title>
-                        <Card.Text>{post?.desc}</Card.Text>
-                        <Card.Text className={styles.fontLess}>Posted by {`@${post?.authorName}`} at {post?.timestamp.seconds}</Card.Text>
-                    </Card.Body>
-                </Card>
+            {post ?
+                <Container className={styles.paddingTop}>
+                    <Card style={{ marginBottom: 30 }}>
+                        <Card.Body>
+                            <Card.Title>{post?.title}</Card.Title>
+                            <Card.Text>{post?.desc}</Card.Text>
+                            <Card.Text className={styles.fontLess}>Posted by {`@${post?.authorName}`} at {post?.timestamp.seconds}</Card.Text>
+                        </Card.Body>
+                    </Card>
 
-                <Form onSubmit={handleSubmit}>
+                    <Form onSubmit={handleSubmit}>
 
-                    <Form.Group controlId="description">
-                        <Form.Label>Answer</Form.Label>
-                        <Form.Control as="textarea" rows={3} placeholder="" onChange={handleAnswerChange} />
-                    </Form.Group>
+                        <Form.Group controlId="description">
+                            <Form.Label>Answer</Form.Label>
+                            <Form.Control as="textarea" rows={3} placeholder="" onChange={handleAnswerChange} />
+                        </Form.Group>
 
-                    <Button variant="primary" type="submit" style={{ marginTop: 15 }}>
-                        Comment
+                        <Button variant="primary" type="submit" style={{ marginTop: 15 }}>
+                            Comment
                         </Button>
-                </Form>
-                <hr></hr>
-                <h3 style={{ paddingTop: 50, paddingLeft: 22, paddingBottom: 15 }}>Comments</h3>
-                <Card style={{ marginBottom: 20 }}>
-                    <Card.Body>
-                        <Card.Title>@guy</Card.Title>
-                        <Card.Text className={styles.fontLess}> This is my answer</Card.Text>
-                    </Card.Body>
-                </Card>
-                <Card style={{ marginBottom: 20 }}>
-                    <Card.Body>
-                        <Card.Title>@guy</Card.Title>
-                        <Card.Text className={styles.fontLess}> This is my answer</Card.Text>
-                    </Card.Body>
-                </Card>
-                <Card style={{ marginBottom: 20 }}>
-                    <Card.Body>
-                        <Card.Title>@guy</Card.Title>
-                        <Card.Text className={styles.fontLess}> This is my answer</Card.Text>
-                    </Card.Body>
-                </Card>
-            </Container>
+                    </Form>
+
+                    <hr></hr>
+
+
+
+                    {comments
+                        ?
+                        <div>
+                            <h3 style={{ paddingTop: 50, paddingLeft: 22, paddingBottom: 15 }}>{comments.length} comments</h3>
+                            {feedView(comments)}
+                        </div>
+                        :
+                        commentsDone ?
+                            <h3 style={{ paddingTop: 50, paddingLeft: 22, paddingBottom: 15 }}>0 comments</h3>
+                            :
+                            <Spinner animation="border" />
+                    }
+                </Container>
+                :
+                loadingDone ?
+                    <Container className={styles.paddingTop}>
+                        <h1>No post found.</h1>
+                    </Container>
+                    :
+                    <Container className={styles.paddingTop}>
+                        <Spinner animation="border" />
+                    </Container>
+            }
+
         </div>
     )
 }

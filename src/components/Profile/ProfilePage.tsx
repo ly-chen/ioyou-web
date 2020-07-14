@@ -24,6 +24,8 @@ const ProfilePage: React.FC = () => {
 
     const [history, setHistory] = useState<any>(null);
 
+    const [historyDone, setHistoryDone] = useState<boolean>(false);
+
 
     //list of subjects
     const [actives, setActives] = useState<any>({});
@@ -73,9 +75,10 @@ const ProfilePage: React.FC = () => {
 
                         setHistory(docList)
                         console.log('docList = ', docList)
-
+                        setHistoryDone(true)
                     } catch (e) {
                         console.log(e)
+                        setHistoryDone(true)
                     }
                 }
 
@@ -454,15 +457,19 @@ const ProfilePage: React.FC = () => {
 
                         </Card>
 
+                        <h2 style={{ paddingTop: 50, paddingLeft: 22 }}>Post History</h2>
+
                         {history
                             ?
                             <div>
-                                <h2 style={{ marginTop: 40, marginLeft: 20 }}>Post History</h2>
+
                                 {feedView(history)}
                             </div>
-
                             :
-                            <div></div>
+                            historyDone ?
+                                <h3>No posts.</h3>
+                                :
+                                <Spinner animation="border" />
                         }
 
                     </Container>

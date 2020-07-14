@@ -50,9 +50,16 @@ const HomePage: React.FC = () => {
                     console.log('No matching documents')
                     return;
                 }
+
                 posts.forEach(doc => {
                     docList = [...docList, { id: doc.id, data: doc.data() }];
                 });
+
+                for (let i = 0; i < docList.length; i++) {
+                    const doc = docList[i]
+                    const numComments = await firebase.db.collection('comments').where('parent', '==', doc.id).get()
+                    docList[i] = { id: doc.id, data: doc.data, numComments: numComments.size }
+                }
 
                 if (category === 'all') {
                     setAllFeed(docList)
@@ -84,7 +91,7 @@ const HomePage: React.FC = () => {
     }, [session, firebase])
 
     //a feed object
-    const feedCard = (object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string } }) => {
+    const feedCard = (object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string }; numComments: number }) => {
 
         const channelView = () => {
             const subjectObjects = object.data.channels?.map((d) => <p key={d}>{(object.data.channels.indexOf(d) == 0) ? `#${d}` : `, #${d}`}</p>)
@@ -105,7 +112,10 @@ const HomePage: React.FC = () => {
                     </a>
                     <Card.Subtitle>{channelView()}</Card.Subtitle>
                     <Card.Text className={styles.fontLess}> {object.data.desc}</Card.Text>
-                    <Card.Text className={styles.fontLess}>Posted by {`@${object.data.authorName}`} at {object.data.timestamp.seconds}</Card.Text>
+                    <Card.Text className={styles.fontLess}>
+                        <a href={`/post/${object.id}`}>{object.numComments} comments</a>
+                        {' '} - Posted by <a href={`/user/${object.data.authorName}`}>{`@${object.data.authorName}`}</a> at {object.data.timestamp.seconds}
+                    </Card.Text>
                 </Card.Body>
             </Card>
 
@@ -159,8 +169,8 @@ const HomePage: React.FC = () => {
     }
 
     //list of feed objects
-    const feedView = (feedList: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number; nanoseconds: number }; author: string; channels: string[]; authorName: string } }[]) => {
-        const feedItems = feedList.map((object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string } }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
+    const feedView = (feedList: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number; nanoseconds: number }; author: string; channels: string[]; authorName: string }; numComments: number }[]) => {
+        const feedItems = feedList.map((object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string }; numComments: number }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
         )
         return feedItems
     }
