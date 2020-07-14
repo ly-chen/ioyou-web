@@ -1,8 +1,56 @@
-import React from 'react';
-import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Form, InputGroup, FormControl } from 'react-bootstrap'
+import React, { useState, useEffect } from 'react';
+import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Form, Spinner, FormControl } from 'react-bootstrap'
+import { useFirebase, Firebase } from '../Firebase'
+import { useSession } from '../Session'
 import styles from './Login.module.css'
 
 const LoginPage: React.FC = () => {
+    const firebase = useFirebase()
+    const session = useSession()
+
+    const [validated, setValidated] = useState<boolean>(false);
+    const [email, setEmail] = useState<string>('')
+    const [password, setPassword] = useState<string>('')
+    const [err, setErr] = useState<string>('')
+
+    const [handling, setHandling] = useState<boolean>(false)
+
+    useEffect(() => {
+        if (session.auth && validated) {
+            window.location.href = '/'
+        }
+    }, [session, firebase])
+
+    const handleSubmit = async (event: any) => {
+        event.preventDefault();
+        setHandling(true);
+        console.log('email = ', email)
+        console.log('password = ', password)
+        console.log(event.currentTarget)
+        if (event.currentTarget.checkValidity() === false) {
+            console.log(validated);
+            event.preventDefault();
+            event.stopPropagation();
+        } else {
+            try {
+                await firebase.doSignInWithEmailAndPassword(email, password)
+                setValidated(true);
+                window.location.href = "/"
+            } catch (e) {
+                console.log(e);
+                setErr(e.message);
+            }
+        }
+        console.log(validated);
+    }
+
+    const handleChangeEmail = (event: any) => {
+        setEmail(event.target.value)
+    }
+
+    const handleChangePassword = (event: any) => {
+        setPassword(event.target.value)
+    }
 
     return (
         <div>
@@ -19,19 +67,33 @@ const LoginPage: React.FC = () => {
 
             </Navbar>
             <Container className={styles.paddingTop}>
-                <Form>
+                <Form validated={validated} onSubmit={handleSubmit}>
                     <Form.Group controlId="formBasicEmail">
                         <Form.Label>Email address</Form.Label>
-                        <Form.Control type="email" placeholder="Enter email" />
+                        <Form.Control required type="email" placeholder="Enter email" onChange={handleChangeEmail} value={email} />
                     </Form.Group>
                     <Form.Group controlId="formBasicPassword">
                         <Form.Label>Password</Form.Label>
-                        <Form.Control type="password" placeholder="Password" />
+                        <Form.Control required type="password" placeholder="Password" onChange={handleChangePassword} value={password} />
                     </Form.Group>
-                    <Button variant="primary" type="submit" style={{ marginTop: 10 }}>
-                        Log in
-                    </Button>
+                    {handling ?
+                        <Button variant="primary" disabled>
+                            <Spinner
+                                as="span"
+                                animation="border"
+                                size="sm"
+                                role="status"
+                                aria-hidden="true"
+                            />
+                        </Button>
+                        :
+                        <Button variant="primary" type="submit" style={{ marginTop: 10 }}>
+                            Log in
+                        </Button>
+                    }
+
                 </Form>
+                <p className="text-danger">{err}</p>
             </Container>
         </div>
     )

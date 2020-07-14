@@ -11,7 +11,6 @@
 
 .fontLess {
     font-weight: normal;
-    color: black;
 }
 
 .opaqueLess {
@@ -21,9 +20,3 @@
 .refresh {
     padding-left: 1rem;
 }
-
-.aNoStyle {
-    color: 'black';
-    text-decoration: none;
-}
-

@@ -11,8 +11,10 @@ import { HomePage } from '../Home'
 import { ProfilePage } from '../Profile'
 import { SignupPage } from '../Signup'
 import { LoginPage } from '../Login'
+import { PostPage } from '../Post'
 import { useFirebase } from '../Firebase'
 import { useSession, SessionContext } from '../Session/'
+import { QuestionPage } from '../Question'
 
 const MainApp: React.FC = () => {
     const session = useSession()
@@ -23,9 +25,6 @@ const MainApp: React.FC = () => {
     return (
         <Router>
             <Switch>
-                {/* <Route path={ROUTES.USERNAME}>
-                    <ProfilePage />
-                </Route> */}
                 <Route exact path={ROUTES.ROOT}>
                     <HomePage />
                 </Route>
@@ -34,6 +33,15 @@ const MainApp: React.FC = () => {
                 </Route>
                 <Route path={ROUTES.LOGIN}>
                     <LoginPage />
+                </Route>
+                <Route path={ROUTES.POST}>
+                    <PostPage />
+                </Route>
+                <Route path={ROUTES.USERNAME}>
+                    <ProfilePage />
+                </Route>
+                <Route path={ROUTES.COMMENTS}>
+                    <QuestionPage />
                 </Route>
             </Switch>
         </Router>
