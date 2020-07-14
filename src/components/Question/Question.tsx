@@ -82,7 +82,7 @@ const QuestionPage: React.FC = (props) => {
         event.preventDefault()
         console.log(answer)
         const newComment = { comment: answer, parent: postid, thread: postid, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, authorName: self.username }
-        await firestore().collection('comments').doc().set(newComment).then(() => {
+        await functions().httpsCallable('createComment')(newComment).then(() => {
             getComments()
         })
     }

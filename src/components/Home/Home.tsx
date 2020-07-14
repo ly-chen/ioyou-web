@@ -14,7 +14,14 @@ const HomePage: React.FC = () => {
     const [bulletin, setBulletin] = useState<any>(null)
     const [channels, setChannels] = useState<Array<string>>([])
 
+    const [nowSeconds, setNowSeconds] = useState<number>(0);
+
     useEffect(() => {
+        var now = new Date();
+        var seconds = ((now.getTime()) * .001) >> 0;
+        setNowSeconds(seconds);
+
+        console.log(seconds)
         //retrieves the most recent 10 posts
         const getChannels = async () => {
             try {
@@ -93,6 +100,28 @@ const HomePage: React.FC = () => {
     //a feed object
     const feedCard = (object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string }; numComments: number }) => {
 
+        var time = nowSeconds - object.data.timestamp.seconds;
+        var message = ''
+        if (time < 120) {
+            message = 'about a minute ago'
+        } else if (time < 3600) {
+            message = `${Math.floor(time / 60)} minutes ago`
+        } else if (time < 86400) {
+            let curTime = Math.floor(time / 3600)
+            if (curTime == 1) {
+                message = 'about an hour ago'
+            } else {
+                message = `${curTime} hours ago`
+            }
+        } else {
+            let curTime = Math.floor(time / 86400)
+            if (curTime == 1) {
+                message = 'yesterday'
+            } else {
+                message = `${curTime} days ago`
+            }
+        }
+
         const channelView = () => {
             const subjectObjects = object.data.channels?.map((d) => <p key={d}>{(object.data.channels.indexOf(d) == 0) ? `#${d}` : `, #${d}`}</p>)
             return (
@@ -113,8 +142,13 @@ const HomePage: React.FC = () => {
                     <Card.Subtitle>{channelView()}</Card.Subtitle>
                     <Card.Text className={styles.fontLess}> {object.data.desc}</Card.Text>
                     <Card.Text className={styles.fontLess}>
-                        <a href={`/post/${object.id}`}>{object.numComments} comments</a>
-                        {' '} - Posted by <a href={`/user/${object.data.authorName}`}>{`@${object.data.authorName}`}</a> at {object.data.timestamp.seconds}
+                        {object.numComments == 1 ?
+                            <a href={`/post/${object.id}`}>{object.numComments} comment</a>
+                            :
+                            <a href={`/post/${object.id}`}>{object.numComments} comments</a>
+                        }
+
+                        {' '} - posted by <a href={`/user/${object.data.authorName}`}>{`@${object.data.authorName}`}</a> - {message}
                     </Card.Text>
                 </Card.Body>
             </Card>
