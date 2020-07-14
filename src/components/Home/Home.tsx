@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { useFirebase, Firebase } from '../Firebase'
+import { functions, auth, firestore } from 'firebase'
 import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card } from 'react-bootstrap'
 import { useSession } from '../Session'
 import styles from './Home.module.css'
@@ -46,18 +47,23 @@ const HomePage: React.FC = () => {
 
         getPosts();
     }, [session, firebase])
+    
 
     //a feed object
     const feedCard = (object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string } }) => {
+     
+        const date = new Date((object.data.timestamp.seconds)*1000).toLocaleDateString();
+        const time = new Date((object.data.timestamp.seconds)*1000).toLocaleTimeString();
+        console.log('date = ', date)
         return (
-            
                 <Card style={{ marginBottom: 20 }}>
                     <Card.Body>
                     <a href={`/question/${object.id}`}>
                         <Card.Title>{object.data.title}</Card.Title>
                         </a>
                         <Card.Text className={styles.fontLess}> {object.data.desc}</Card.Text>
-                        <Card.Text className={styles.fontLess}> {object.data.timestamp.seconds}</Card.Text>
+                        <Card.Text className={styles.fontLess}>{date}</Card.Text>
+                        <Card.Text className={styles.fontLess}>{time}</Card.Text>
                     </Card.Body>
                 </Card>
                 
