@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Form, InputGroup, FormControl } from 'react-bootstrap'
+import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Form, Spinner, FormControl } from 'react-bootstrap'
 import { useFirebase, Firebase } from '../Firebase'
 import { useSession } from '../Session'
 import styles from './Login.module.css'
@@ -13,6 +13,8 @@ const LoginPage: React.FC = () => {
     const [password, setPassword] = useState<string>('')
     const [err, setErr] = useState<string>('')
 
+    const [handling, setHandling] = useState<boolean>(false)
+
     useEffect(() => {
         if (session.auth && validated) {
             window.location.href = '/'
@@ -21,6 +23,7 @@ const LoginPage: React.FC = () => {
 
     const handleSubmit = async (event: any) => {
         event.preventDefault();
+        setHandling(true);
         console.log('email = ', email)
         console.log('password = ', password)
         console.log(event.currentTarget)
@@ -73,9 +76,22 @@ const LoginPage: React.FC = () => {
                         <Form.Label>Password</Form.Label>
                         <Form.Control required type="password" placeholder="Password" onChange={handleChangePassword} value={password} />
                     </Form.Group>
-                    <Button variant="primary" type="submit" style={{ marginTop: 10 }}>
-                        Log in
-                    </Button>
+                    {handling ?
+                        <Button variant="primary" disabled>
+                            <Spinner
+                                as="span"
+                                animation="border"
+                                size="sm"
+                                role="status"
+                                aria-hidden="true"
+                            />
+                        </Button>
+                        :
+                        <Button variant="primary" type="submit" style={{ marginTop: 10 }}>
+                            Log in
+                        </Button>
+                    }
+
                 </Form>
                 <p className="text-danger">{err}</p>
             </Container>

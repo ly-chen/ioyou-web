@@ -72,7 +72,7 @@ const QuestionPage: React.FC = () => {
                     </Form.Group>
 
                     <Button variant="primary" type="submit" style={{ marginTop: 15 }}>
-                        Post
+                        Comment
                         </Button>
                 </Form>
                 <hr></hr>

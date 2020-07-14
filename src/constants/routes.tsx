@@ -2,9 +2,9 @@ const ROUTES = {
     ROOT: "/",
     SIGNUP: "/signup",
     LOGIN: "/login",
-    POST: "/post",
+    POST: "/new",
     USERNAME: "/user/:username",
-    COMMENTS: "/question/:postid"
+    COMMENTS: "/post/:postid"
 }
 
 export { ROUTES }
