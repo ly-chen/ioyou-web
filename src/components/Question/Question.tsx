@@ -1,38 +1,50 @@
 import React, { useState, useEffect } from 'react'
+import { useParams } from 'react-router-dom';
 import { useFirebase, Firebase } from '../Firebase'
 import { functions, auth, firestore } from 'firebase'
 import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card, Form } from 'react-bootstrap'
 import { useSession } from '../Session'
 import styles from './Question.module.css'
 
-const QuestionPage: React.FC = () => {
+const QuestionPage: React.FC = (props) => {
     const firebase = useFirebase()
     const session = useSession()
 
-    const [title, setTitle] = useState<string>("")
-    const [description, setDescription] = useState<string>("")
+    const { postid } = useParams()
+
+    const [self, setSelf] = useState<any>(null);
+    const [post, setPost] = useState<any>(null);
+
+    const [answer, setAnswer] = useState<string>("")
 
     useEffect(() => {
-        if (!session.auth) {
-            window.location.href = "/"
+        if (session.auth) {
+            const getSelf = async () => {
+                const selfDoc = await (await firestore().collection('users').doc(session.auth?.uid).get()).data()
+                setSelf(selfDoc)
+            }
+            getSelf();
         }
-    })
 
-    const handleTitleChange = (event: any) => {
-        setTitle(event.target.value)
-    }
 
-    const handleDescriptionChange = (event: any) => {
-        setDescription(event.target.value)
+        const getPost = async () => {
+            const postDoc = await (await firestore().collection('posts').doc(postid).get()).data()
+            console.log('postDoc = ', postDoc)
+            setPost(postDoc)
+        }
+
+        getPost();
+    }, [session, firebase])
+
+
+    const handleAnswerChange = (event: any) => {
+        setAnswer(event.target.value)
     }
 
     const handleSubmit = async (event: any) => {
         event.preventDefault()
-        console.log(title)
-        console.log(description)
-        const newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid }
-        await functions().httpsCallable('createPost')(newPost)
-        window.location.href = "/"
+        console.log(answer)
+        const newPost = { answer: answer, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, authorName: self.username }
     }
 
 
@@ -59,8 +71,9 @@ const QuestionPage: React.FC = () => {
             <Container className={styles.paddingTop}>
                 <Card style={{ marginBottom: 30 }}>
                     <Card.Body>
-                        <Card.Title>This is the title</Card.Title>
-                        <Card.Text>This is some desc.</Card.Text>
+                        <Card.Title>{post?.title}</Card.Title>
+                        <Card.Text>{post?.desc}</Card.Text>
+                        <Card.Text className={styles.fontLess}>Posted by {`@${post?.authorName}`} at {post?.timestamp.seconds}</Card.Text>
                     </Card.Body>
                 </Card>
 
@@ -68,7 +81,7 @@ const QuestionPage: React.FC = () => {
 
                     <Form.Group controlId="description">
                         <Form.Label>Answer</Form.Label>
-                        <Form.Control as="textarea" rows={3} placeholder="" onChange={handleDescriptionChange} />
+                        <Form.Control as="textarea" rows={3} placeholder="" onChange={handleAnswerChange} />
                     </Form.Group>
 
                     <Button variant="primary" type="submit" style={{ marginTop: 15 }}>

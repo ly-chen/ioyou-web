@@ -33,7 +33,7 @@ const PostPage: React.FC = () => {
             }
             getUser()
         }
-    })
+    }, [session, firebase])
 
     const handleChannelChange = (event: any) => {
         setInput(event.target.value)
