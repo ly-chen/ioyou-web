@@ -19,13 +19,24 @@ const PostPage: React.FC = () => {
 
     const [handling, setHandling] = useState<boolean>(false)
 
+    const [input, setInput] = useState<string>("")
+
+    const [name, setName] = useState<string>("")
+
     useEffect(() => {
         if (!session.auth) {
             window.location.href = "/"
+        } else {
+            const getUser = async () => {
+                const user = await firestore().collection('users').doc(session.auth?.uid).get()
+                setName(user.data()?.username)
+            }
+            getUser()
         }
     })
 
     const handleChannelChange = (event: any) => {
+        setInput(event.target.value)
         if (event.target.value.length > 0) {
             let strKeyword = event.target.value
             let subjects = []
@@ -46,6 +57,8 @@ const PostPage: React.FC = () => {
                 setErr('Maximum 10 channels')
             } else {
                 setErr('')
+                setInput('')
+                setChannelList([])
                 if (channels.indexOf(d) != -1) {
                     return
                 } else {
@@ -102,7 +115,12 @@ const PostPage: React.FC = () => {
         event.preventDefault()
         console.log(title)
         console.log(description)
-        const newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: channels }
+        let newPost = null;
+        if (channels.length == 0) {
+            newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: ['General'], authorName: name }
+        } else {
+            newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: channels, authorName: name }
+        }
         await functions().httpsCallable('createPost')(newPost)
         window.location.href = "/"
     }
@@ -134,14 +152,16 @@ const PostPage: React.FC = () => {
                     <Form onSubmit={handleSubmit}>
                         <Form.Group controlId="channels">
                             <Form.Label>Channels</Form.Label>
-                            {subjectsView()}
-                            <Form.Control required type="text" placeholder="What subjects?" onChange={handleChannelChange} />
+                            <Row style={{ marginLeft: 10 }}>
+                                {selectedView()}
+                                {subjectsView()}
+                            </Row>
+
+                            <Form.Control type="text" placeholder="What subjects?" onChange={handleChannelChange} value={input} />
                             <Form.Text className="text-danger">
                                 {err}
                             </Form.Text>
                         </Form.Group>
-
-                        {selectedView()}
 
                         <Form.Group controlId="title">
                             <Form.Label>Title</Form.Label>

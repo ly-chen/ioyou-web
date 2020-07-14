@@ -22,6 +22,8 @@ const ProfilePage: React.FC = () => {
     const [sci, setSci] = useState<boolean>(false)
     const [ss, setSS] = useState<boolean>(false);
 
+    const [history, setHistory] = useState<any>(null);
+
 
     //list of subjects
     const [actives, setActives] = useState<any>({});
@@ -33,29 +35,56 @@ const ProfilePage: React.FC = () => {
                 console.log('empty');
                 setUserLoading(false);
             } else {
+
+                const userID = await results.docs[0].id
                 const userResults = await results.docs[0].data()
                 setUser(userResults)
                 setActives(userResults.actives)
 
-                if (userResults.actives['French'] || userResults.actives['Mandarin'] || userResults.actives['Spanish'] || userResults.actives['Languages (General)']) {
-                    setLang(true)
-                    console.log('lang = true')
+                if (userResults.actives) {
+                    if (userResults.actives['French'] || userResults.actives['Mandarin'] || userResults.actives['Spanish'] || userResults.actives['Languages (General)']) {
+                        setLang(true)
+                    }
+
+                    if (userResults.actives['Biology'] || userResults.actives['Chemistry'] || userResults.actives['Physics'] || userResults.actives['Sciences (General)']) {
+                        setSci(true)
+                    }
+
+                    if (userResults.actives['Psychology'] || userResults.actives['Sociology'] || userResults.actives['Social Sciences (General)']) {
+                        setSS(true)
+                    }
+                }
+                console.log('userResults = ', userResults)
+                console.log('userResults.uid = ', userResults.uid)
+
+                const getPosts = async (sort: string) => {
+                    try {
+                        var docList: any[] = []
+                        const posts = await firebase.db.collection('posts').orderBy(sort, "desc").where('author', '==', userID).limit(10).get()
+
+
+                        if (posts.empty || posts == null) {
+                            console.log('No matching documents')
+                            return;
+                        }
+                        posts.forEach(doc => {
+                            docList = [...docList, { id: doc.id, data: doc.data() }];
+                        });
+
+                        setHistory(docList)
+                        console.log('docList = ', docList)
+
+                    } catch (e) {
+                        console.log(e)
+                    }
                 }
 
-                if (userResults.actives['Biology'] || userResults.actives['Chemistry'] || userResults.actives['Physics'] || userResults.actives['Sciences (General)']) {
-                    setSci(true)
-                }
 
-                if (userResults.actives['Psychology'] || userResults.actives['Sociology'] || userResults.actives['Social Sciences (General)']) {
-                    setSS(true)
-                }
-
-
-                console.log(userResults)
-                console.log('user.actives =', userResults.actives)
+                getPosts('timestamp.seconds');
                 setUserLoading(false);
             }
         }
+
         getUser();
 
         if (session.auth) {
@@ -65,13 +94,14 @@ const ProfilePage: React.FC = () => {
                     setUserSelf(true);
                 }
             }
+
+
             getSelf();
         }
 
     }, [session, firebase])
 
     const subjectsView = () => {
-        console.log('actives = ', actives)
         const subjectObjects = Object.entries(actives).map(([keyName, keyIndex]) =>
             // use keyName to get current key's name
             // and a[keyName] to get its value
@@ -84,7 +114,6 @@ const ProfilePage: React.FC = () => {
 
             </div>
         )
-        console.log('subjectObjects = ', subjectObjects)
         return (
             <Row style={{ paddingTop: 15, paddingLeft: 15 }}>
                 {subjectObjects}
@@ -301,6 +330,43 @@ const ProfilePage: React.FC = () => {
         )
     }
 
+    //a feed object
+    const feedCard = (object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string } }) => {
+
+        const channelView = () => {
+            const subjectObjects = object.data.channels?.map((d) => <p key={d}>{(object.data.channels.indexOf(d) == 0) ? `#${d}` : `, #${d}`}</p>)
+            return (
+                <div>
+                    <Row style={{ marginLeft: 1 }}>{subjectObjects}</Row>
+
+                </div>
+            )
+        }
+
+        return (
+
+            <Card style={{ marginBottom: 20 }}>
+                <Card.Body>
+                    <a href={`/post/${object.id}`}>
+                        <Card.Title>{object.data.title}</Card.Title>
+                    </a>
+                    <Card.Subtitle>{channelView()}</Card.Subtitle>
+                    <Card.Text className={styles.fontLess}> {object.data.desc}</Card.Text>
+                    <Card.Text className={styles.fontLess}>Posted by {`@${object.data.authorName}`} at {object.data.timestamp.seconds}</Card.Text>
+                </Card.Body>
+            </Card>
+
+            //
+        )
+    }
+
+    //list of feed objects
+    const feedView = (feedList: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number; nanoseconds: number }; author: string; channels: string[]; authorName: string } }[]) => {
+        const feedItems = feedList.map((object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string } }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
+        )
+        return feedItems
+    }
+
     return (
         <div>
             <Navbar bg="light" variant="light">
@@ -361,16 +427,16 @@ const ProfilePage: React.FC = () => {
                                 <hr></hr>
 
                                 <Row style={{ paddingLeft: 15 }}>
-                                    <h3 style={{ paddingRight: 15 }}>Subjects</h3>
+                                    <h3 style={{ paddingRight: 15 }}>Channels</h3>
                                     {userSelf ?
                                         editSubjects ?
-                                            <Button onClick={async () => {
+                                            <Button variant="outline-dark" onClick={async () => {
                                                 setEditSubjects(false)
                                                 await firestore().collection('users').doc(session.auth?.uid).update({ actives: actives })
-                                                console.log('saved actives = ', actives)
+
                                             }}>Save</Button>
                                             :
-                                            <Button onClick={() => { setEditSubjects(true) }}>Edit</Button>
+                                            <Button variant="outline-dark" onClick={() => { setEditSubjects(true) }}>Edit</Button>
                                         :
                                         <div></div>
                                     }
@@ -379,11 +445,25 @@ const ProfilePage: React.FC = () => {
                                     editSubjects ?
                                         editSubjectsView()
                                         :
-                                        subjectsView()
+                                        actives ?
+                                            subjectsView()
+                                            :
+                                            <div></div>
                                 }
                             </Card.Body>
 
                         </Card>
+
+                        {history
+                            ?
+                            <div>
+                                <h2 style={{ marginTop: 40, marginLeft: 20 }}>Post History</h2>
+                                {feedView(history)}
+                            </div>
+
+                            :
+                            <div></div>
+                        }
 
                     </Container>
                     :
@@ -391,6 +471,8 @@ const ProfilePage: React.FC = () => {
                         <h1>User does not exist.</h1>
                     </Container>
             }
+
+
 
         </div>
     )
