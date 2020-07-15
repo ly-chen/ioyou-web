@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { useFirebase, Firebase } from '../Firebase'
-import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card, Tabs, Tab } from 'react-bootstrap'
+import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card, Tabs, Tab, CardColumns } from 'react-bootstrap'
 import { useSession } from '../Session'
 import styles from './Home.module.css'
 
@@ -13,6 +13,11 @@ const HomePage: React.FC = () => {
     const [academic, setAcademic] = useState<any>(null)
     const [bulletin, setBulletin] = useState<any>(null)
     const [channels, setChannels] = useState<Array<string>>([])
+
+    const [allLoadingDone, setAllLoadingDone] = useState<boolean>(false);
+    const [homeLoadingDone, setHomeLoadingDone] = useState<boolean>(false);
+    const [acadLoadingDone, setAcadLoadingDone] = useState<boolean>(false);
+    const [bulLoadingDone, setBulLoadingDone] = useState<boolean>(false);
 
     const [nowSeconds, setNowSeconds] = useState<number>(0);
 
@@ -46,14 +51,26 @@ const HomePage: React.FC = () => {
                 const query = firebase.db.collection('posts').orderBy(sort, "desc")
 
                 let posts = null;
-                if (category === 'home') {
-                    posts = await query.where('channels', 'array-contains-any', subjects).limit(10).get()
-                    console.log('posts = ', posts)
+                console.log('subjects =', subjects)
+                if (subjects == undefined || subjects?.length == 0) {
+                    if (category === 'home') {
+                        posts = null
+                        setHomeLoadingDone(true)
+                    } else {
+                        posts = await query.limit(10).get()
+                    }
+
+
                 } else {
-                    posts = await query.limit(10).get()
+                    if (category === 'home') {
+                        posts = await query.where('channels', 'array-contains-any', subjects).limit(10).get()
+                        console.log('posts = ', posts)
+                    } else {
+                        posts = await query.limit(10).get()
+                    }
                 }
 
-                if (posts.empty || posts == null) {
+                if (posts?.empty || posts == null) {
                     console.log('No matching documents')
                     return;
                 }
@@ -70,15 +87,19 @@ const HomePage: React.FC = () => {
 
                 if (category === 'all') {
                     setAllFeed(docList)
+                    setAllLoadingDone(true)
                 }
                 if (category === 'home') {
                     setHomeFeed(docList)
+                    setHomeLoadingDone(true)
                 }
                 if (category === 'academic') {
                     setAcademic(docList)
+                    setAcadLoadingDone(true)
                 }
                 if (category === 'bulletin') {
                     setBulletin(docList)
+                    setBulLoadingDone(true)
                 }
             } catch (e) {
                 console.log(e)
@@ -86,12 +107,23 @@ const HomePage: React.FC = () => {
         }
 
         const loadPosts = async () => {
-            const subjects = await getChannels()
+            let subjects: string[] | undefined = []
+            if (session.auth) {
+                subjects = await getChannels()
+            }
+
+            if (subjects == [] || subjects == undefined) {
+                getPosts('timestamp.seconds', 'all', undefined)
+                getPosts('timestamp.seconds', 'home', undefined)
+                getPosts('timestamp.seconds', 'academic', undefined)
+                getPosts('timestamp.seconds', 'bulletin', undefined)
+            } else {
+                getPosts('timestamp.seconds', 'all', subjects)
+                getPosts('timestamp.seconds', 'home', subjects)
+                getPosts('timestamp.seconds', 'academic', subjects)
+                getPosts('timestamp.seconds', 'bulletin', subjects)
+            }
             console.log('subjects = ', subjects)
-            getPosts('timestamp.seconds', 'all', subjects)
-            getPosts('timestamp.seconds', 'home', subjects)
-            getPosts('timestamp.seconds', 'academic', subjects)
-            getPosts('timestamp.seconds', 'bulletin', subjects)
         }
 
         loadPosts()
@@ -227,7 +259,10 @@ const HomePage: React.FC = () => {
                                 Profile
                             </Button>
                             <Button href="/new" variant="outline-dark" style={{ marginRight: 10 }}>Create Post</Button>
-                            <Button variant="light" onClick={() => { firebase.doSignOut() }}>
+                            <Button variant="light" onClick={() => {
+                                firebase.doSignOut()
+                                window.location.reload()
+                            }}>
                                 sign out
                             </Button>
                         </div>
@@ -255,13 +290,20 @@ const HomePage: React.FC = () => {
 
                     </Col>
                 </Row>
-                <Tabs defaultActiveKey="Home" id="feed-nav">
+                <Tabs defaultActiveKey={session.auth ? 'Home' : 'All'} id="feed-nav">
                     <Tab eventKey="All" title="All">
                         {
                             allFeed ?
                                 feedView(allFeed)
                                 :
-                                feedLoadingView()
+                                allLoadingDone ?
+                                    <Card style={{ marginTop: 15 }}>
+                                        <Card.Body>
+                                            <Card.Text>We're encounter errors. Try again later?</Card.Text>
+                                        </Card.Body>
+                                    </Card>
+                                    :
+                                    feedLoadingView()
                         }
                     </Tab>
                     <Tab eventKey="Home" title="Home">
@@ -269,7 +311,21 @@ const HomePage: React.FC = () => {
                             homeFeed ?
                                 feedView(homeFeed)
                                 :
-                                feedLoadingView()
+                                homeLoadingDone ?
+                                    session.auth ?
+                                        <Card style={{ marginTop: 15 }}>
+                                            <Card.Body>
+                                                <Card.Text>Subscribe to channels in your Profile page.</Card.Text>
+                                            </Card.Body>
+                                        </Card>
+                                        :
+                                        <Card style={{ marginTop: 15 }}>
+                                            <Card.Body>
+                                                <Card.Text>Create an account to subscribe to specific channels.</Card.Text>
+                                            </Card.Body>
+                                        </Card>
+                                    :
+                                    feedLoadingView()
                         }
                     </Tab>
                     <Tab eventKey="Academic" title="Academic">
@@ -277,7 +333,21 @@ const HomePage: React.FC = () => {
                             academic ?
                                 feedView(academic)
                                 :
-                                feedLoadingView()
+                                acadLoadingDone ?
+                                    session.auth ?
+                                        <Card style={{ marginTop: 15 }}>
+                                            <Card.Body>
+                                                <Card.Text>Subscribe to channels in your Profile page.</Card.Text>
+                                            </Card.Body>
+                                        </Card>
+                                        :
+                                        <Card style={{ marginTop: 15 }}>
+                                            <Card.Body>
+                                                <Card.Text>Create an account to subscribe to specific channels.</Card.Text>
+                                            </Card.Body>
+                                        </Card>
+                                    :
+                                    feedLoadingView()
                         }
                     </Tab>
                     <Tab eventKey="Bulletin" title="Bulletin">
@@ -285,7 +355,14 @@ const HomePage: React.FC = () => {
                             bulletin ?
                                 feedView(bulletin)
                                 :
-                                feedLoadingView()
+                                bulLoadingDone ?
+                                    <Card style={{ marginTop: 15 }}>
+                                        <Card.Body>
+                                            <Card.Text>We're encounter errors. Try again later?</Card.Text>
+                                        </Card.Body>
+                                    </Card>
+                                    :
+                                    feedLoadingView()
                         }
                     </Tab>
                 </Tabs>

@@ -120,16 +120,33 @@ const QuestionPage: React.FC = (props) => {
                             ioyou
                     </Navbar.Brand>
                 <Nav className="ml-auto">
-                    <Button variant="light" onClick={async () => {
-                        const user = await firebase.db.collection('users').doc(session?.auth?.uid).get()
-                        const username = user?.data()?.username
-                        window.location.href = `/user/${username}`
-                    }} style={{ marginRight: 10 }}>
-                        Profile
+                    {session.auth ?
+                        <div>
+                            <Button variant="light" onClick={async () => {
+                                const user = await firebase.db.collection('users').doc(session?.auth?.uid).get()
+                                const username = user?.data()?.username
+                                window.location.href = `/user/${username}`
+                            }} style={{ marginRight: 10 }}>
+                                Profile
                             </Button>
-                    <Button variant="outline-dark" onClick={() => { firebase.doSignOut() }}>
-                        sign out
-                    </Button>
+                            <Button variant="outline-dark" onClick={() => {
+                                window.location.reload()
+                                firebase.doSignOut()
+                            }}>
+                                sign out
+                            </Button>
+                        </div>
+
+                        :
+                        <div>
+                            <Button variant="outline-dark" href="/login" style={{ marginRight: 10 }}>
+                                log in
+                                </Button>
+
+                            <Button variant="light" href="/signup">
+                                sign up
+                                </Button>
+                        </div>}
                 </Nav>
             </Navbar>
             {post ?
@@ -142,17 +159,22 @@ const QuestionPage: React.FC = (props) => {
                         </Card.Body>
                     </Card>
 
-                    <Form onSubmit={handleSubmit}>
+                    {session.auth ?
+                        <Form onSubmit={handleSubmit}>
 
-                        <Form.Group controlId="description">
-                            <Form.Label>Answer</Form.Label>
-                            <Form.Control as="textarea" rows={3} placeholder="" onChange={handleAnswerChange} />
-                        </Form.Group>
+                            <Form.Group controlId="description">
+                                <Form.Label>Answer</Form.Label>
+                                <Form.Control as="textarea" rows={3} placeholder="" onChange={handleAnswerChange} />
+                            </Form.Group>
 
-                        <Button variant="primary" type="submit" style={{ marginTop: 15 }}>
-                            Comment
+                            <Button variant="primary" type="submit" style={{ marginTop: 15 }}>
+                                Comment
                         </Button>
-                    </Form>
+                        </Form>
+                        :
+                        <div></div>
+                    }
+
 
                     <hr></hr>
 

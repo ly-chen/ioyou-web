@@ -67,6 +67,7 @@ const ProfilePage: React.FC = () => {
 
                         if (posts.empty || posts == null) {
                             console.log('No matching documents')
+                            setHistoryDone(true);
                             return;
                         }
                         posts.forEach(doc => {
@@ -138,7 +139,6 @@ const ProfilePage: React.FC = () => {
 
     const editSubjectsView = () => {
 
-        var bus = actives['Business']
         return (
             <Row style={{ paddingTop: 15, paddingLeft: 15 }}>
                 <Button active={actives['Arts']} variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}
@@ -388,7 +388,10 @@ const ProfilePage: React.FC = () => {
                                 Profile
                             </Button>
                             <Button href="/post" variant="outline-dark" style={{ marginRight: 10 }}>Create Post</Button>
-                            <Button variant="light" onClick={() => { firebase.doSignOut() }}>
+                            <Button variant="light" onClick={() => {
+                                setUserSelf(false);
+                                firebase.doSignOut()
+                            }}>
                                 sign out
                             </Button>
                         </div>
@@ -467,9 +470,12 @@ const ProfilePage: React.FC = () => {
                             </div>
                             :
                             historyDone ?
-                                <h3>No posts.</h3>
+                                <h3 style={{ paddingTop: 15 }}>No posts.</h3>
                                 :
-                                <Spinner animation="border" />
+                                <div style={{ marginTop: 15 }}>
+                                    <Spinner animation="border" />
+                                </div>
+
                         }
 
                     </Container>

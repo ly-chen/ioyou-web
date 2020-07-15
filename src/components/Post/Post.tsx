@@ -141,7 +141,10 @@ const PostPage: React.FC = () => {
                     }} style={{ marginRight: 10 }}>
                         Profile
                     </Button>
-                    <Button variant="light" onClick={() => { firebase.doSignOut() }}>
+                    <Button variant="light" onClick={() => {
+                        window.location.reload()
+                        firebase.doSignOut()
+                    }}>
                         sign out
                     </Button>
                 </Nav>
