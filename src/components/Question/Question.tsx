@@ -21,6 +21,8 @@ const QuestionPage: React.FC = (props) => {
     const [loadingDone, setLoadingDone] = useState<boolean>(false);
     const [commentsDone, setCommentsDone] = useState<boolean>(false);
 
+    const [handling, setHandling] = useState<boolean>(true);
+
     const getComments = async () => {
         try {
             var docList: any[] = []
@@ -80,10 +82,12 @@ const QuestionPage: React.FC = (props) => {
 
     const handleSubmit = async (event: any) => {
         event.preventDefault()
+        setHandling(true);
         console.log(answer)
         const newComment = { comment: answer, parent: postid, thread: postid, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, authorName: self.username }
         await functions().httpsCallable('createComment')(newComment).then(() => {
             getComments()
+            setHandling(false);
         })
     }
 
@@ -167,9 +171,22 @@ const QuestionPage: React.FC = (props) => {
                                 <Form.Control as="textarea" rows={3} placeholder="" onChange={handleAnswerChange} />
                             </Form.Group>
 
-                            <Button variant="primary" type="submit" style={{ marginTop: 15 }}>
-                                Comment
-                        </Button>
+                            {handling ?
+                                <Button variant="primary" style={{ marginTop: 15 }}>
+                                    <Spinner
+                                        as="span"
+                                        animation="border"
+                                        size="sm"
+                                        role="status"
+                                        aria-hidden="true"
+                                    />
+                                </Button>
+                                :
+                                <Button variant="primary" type="submit" style={{ marginTop: 15 }}>
+                                    Comment
+                                </Button>
+                            }
+
                         </Form>
                         :
                         <div></div>
