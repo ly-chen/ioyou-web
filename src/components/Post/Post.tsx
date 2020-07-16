@@ -119,7 +119,7 @@ const PostPage: React.FC = () => {
         if (channels.length == 0) {
             newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: ['General'], authorName: name }
         } else {
-            newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: channels, authorName: name }
+            newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: channels, authorName: name, upvotes: 0 }
         }
         await functions().httpsCallable('createPost')(newPost)
         window.location.href = "/"

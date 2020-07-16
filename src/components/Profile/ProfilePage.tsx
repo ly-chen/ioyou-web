@@ -82,7 +82,7 @@ const ProfilePage: React.FC = () => {
 
                         for (let i = 0; i < docList.length; i++) {
                             const doc = docList[i]
-                            const numComments = await firebase.db.collection('comments').where('parent', '==', doc.id).get()
+                            const numComments = await firebase.db.collection('comments').where('thread', '==', doc.id).get()
                             docList[i] = { id: doc.id, data: doc.data, numComments: numComments.size }
                         }
 
@@ -452,7 +452,7 @@ const ProfilePage: React.FC = () => {
             </Navbar>
             {userLoading ?
                 <Container className={styles.paddingTop}>
-                    <Spinner animation="border" />
+                    <Spinner style={{ marginTop: 30, marginLeft: 30 }} animation="border" />
                 </Container>
                 :
                 user ?
@@ -513,7 +513,7 @@ const ProfilePage: React.FC = () => {
                                 <h3 style={{ paddingTop: 15 }}>No posts.</h3>
                                 :
                                 <div style={{ marginTop: 15 }}>
-                                    <Spinner animation="border" />
+                                    <Spinner style={{ marginTop: 30, marginLeft: 30 }} animation="border" />
                                 </div>
 
                         }

@@ -34,10 +34,15 @@ const QuestionPage: React.FC = (props) => {
     const [replyText, setReplyText] = useState<string>('')
     const [replyHandling, setReplyHandling] = useState<boolean>(false);
 
+    const [changed, setChanged] = useState<boolean>(false);
+
+    const [upvoted, setUpvoted] = useState<string[]>([])
+    const [downvoted, setDownvoted] = useState<string[]>([])
+
     const getComments = async (id: string) => {
         try {
             var docList: any[] = []
-            const commentsList = await firebase.db.collection('comments').where('parent', '==', id).limit(10).get()
+            const commentsList = await firebase.db.collection('comments').where('parent', '==', id).orderBy('upvotes', 'desc').limit(10).get()
 
             console.log('commentsList = ', commentsList)
             if (commentsList.empty || commentsList == null) {
@@ -63,7 +68,96 @@ const QuestionPage: React.FC = (props) => {
         }
     }
 
+    const handleVote = (upvoteTrue: boolean, object: any) => {
+        var collect = 'comments'
+        if (object == post) {
+            const newObject = { data: post, id: postid }
+            object = newObject
+            collect = 'posts'
+        }
+        var upvoteList: string[] = []
+        var downvoteList: string[] = []
+        var upvoteIndex = -1
+        var downvoteIndex = -1
+        console.log('userDoc = ', self)
+        if (self.upvoted) {
+            upvoteList = upvoted
+            upvoteIndex = upvoteList.indexOf(object.id)
+        }
+        if (self.downvoted) {
+            downvoteList = downvoted
+            downvoteIndex = downvoteList.indexOf(object.id)
+        }
+
+        console.log('upvoteIndex = ', upvoteIndex)
+
+        console.log('upvoteList = ', upvoteList)
+
+        console.log('downvoteIndex = ', downvoteIndex)
+
+        console.log('downvoteList = ', downvoteList)
+
+        var upvotes: number;
+        if (object.data.upvotes) {
+            upvotes = object.data.upvotes
+        } else {
+            upvotes = 0
+        }
+
+        if (upvoteTrue) {
+
+            if (upvoteIndex == -1) {
+                if (downvoteIndex != -1) {
+                    downvoteList.splice(downvoteIndex, 1)
+                    firebase.db.collection('users').doc(session.auth?.uid).update({ downvoted: downvoteList })
+                    upvotes = upvotes + 1
+                }
+                upvoteList = [...upvoteList, object.id]
+                console.log('upvoteList after adding = ', upvoteList)
+                upvotes = upvotes + 1
+
+            } else {
+                upvoteList.splice(upvoteIndex, 1)
+                console.log('upvoteList after splice = ', upvoteList)
+                upvotes = upvotes - 1
+            }
+            firebase.db.collection('users').doc(session.auth?.uid).update({ upvoted: upvoteList })
+
+            firebase.db.collection(collect).doc(object.id).update({ upvotes: upvotes })
+            object.data.upvotes = upvotes;
+        } else {
+            if (downvoteIndex == -1) {
+                if (upvoteIndex != -1) {
+                    upvoteList.splice(upvoteIndex, 1)
+                    firebase.db.collection('users').doc(session.auth?.uid).update({ upvoted: upvoteList })
+                    upvotes = upvotes - 1
+                }
+                downvoteList = [...downvoteList, object.id]
+                console.log('downvoteList after adding = ', downvoteList)
+                upvotes = upvotes - 1
+            } else {
+                downvoteList.splice(downvoteIndex, 1)
+                console.log('downvoteList after splice = ', downvoteList)
+                upvotes = upvotes + 1
+            }
+
+
+            firebase.db.collection('users').doc(session.auth?.uid).update({ downvoted: downvoteList })
+            firebase.db.collection(collect).doc(object.id).update({ upvotes: upvotes })
+            object.data.upvotes = upvotes;
+        }
+
+
+        if (upvoteList) {
+            setUpvoted(upvoteList)
+        }
+        if (downvoteList) {
+            setDownvoted(downvoteList)
+        }
+    }
+
     useEffect(() => {
+
         const setAllComments = async () => {
             const allComments = await firebase.db.collection('comments').where('thread', '==', postid).get()
             setNumComments(allComments.size)
@@ -79,6 +173,13 @@ const QuestionPage: React.FC = (props) => {
             const getSelf = async () => {
                 const selfDoc = await (await firestore().collection('users').doc(session.auth?.uid).get()).data()
                 setSelf(selfDoc)
+                if (selfDoc?.upvoted) {
+                    setUpvoted(selfDoc?.upvoted)
+                }
+                if (selfDoc?.downvoted) {
+                    setDownvoted(selfDoc?.downvoted)
+                }
+
             }
             getSelf();
         }
@@ -145,9 +246,10 @@ const QuestionPage: React.FC = (props) => {
         event.preventDefault()
         setReplyHandling(true);
         console.log(replyText)
-        const newReply = { comment: replyText, parent: reply, thread: postid, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, authorName: self.username }
+        const newReply = { comment: replyText, parent: reply, thread: postid, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, authorName: self.username, upvotes: 0 }
         await functions().httpsCallable('createComment')(newReply).then(async () => {
             setComments(await getComments(postid))
+            setNumComments(numComments + 1)
             setCommentsDone(true);
             setReplyHandling(false);
             setReply('');
@@ -158,9 +260,10 @@ const QuestionPage: React.FC = (props) => {
         event.preventDefault()
         setHandling(true);
         console.log(answer)
-        const newComment = { comment: answer, parent: postid, thread: postid, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, authorName: self.username }
+        const newComment = { comment: answer, parent: postid, thread: postid, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, authorName: self.username, upvotes: 0 }
         await functions().httpsCallable('createComment')(newComment).then(async () => {
             setComments(await getComments(postid))
+            setNumComments(numComments + 1)
             setCommentsDone(true);
             setHandling(false);
             setActiveAnswer(false);
@@ -168,7 +271,7 @@ const QuestionPage: React.FC = (props) => {
     }
 
     //a feed object
-    const feedCard = (object: { id: string; data: { comment: string; timestamp: { seconds: number, nanoseconds: number }; author: string; authorName: string; parent: string; thread: string }; replies: any[] }) => {
+    const feedCard = (object: { id: string; data: { comment: string; timestamp: { seconds: number, nanoseconds: number }; author: string; authorName: string; parent: string; thread: string; upvotes: number }; replies: any[] }) => {
         var time = nowSeconds - object.data.timestamp.seconds;
         var message = ''
         if (time < 120) {
@@ -194,59 +297,82 @@ const QuestionPage: React.FC = (props) => {
 
         return (
 
-            <Card style={{ marginBottom: 20 }}>
-                <Card.Body>
-                    <Card.Title>{`@${object.data.authorName}`}</Card.Title>
-                    <Card.Text className={styles.fontLess}> {object.data.comment}</Card.Text>
-                    <Card.Text className={styles.fontLess}>
-                        <Button variant="light" size="sm" onClick={() => { setReply(object.id) }}>Reply</Button>
-                        {' '} - {message}
-                    </Card.Text>
-                    {reply == object.id ?
-                        <Card>
-                            <Card.Body>
-                                <Form onSubmit={handleReplySubmit}>
+            <div className={styles.borderLeft} style={{ marginBottom: 10, paddingLeft: 10, paddingTop: 10 }}>
 
-                                    <Form.Group controlId="description">
-                                        <Form.Control as="textarea" rows={3} placeholder={`Replying to @${object.data.authorName}...`} onChange={handleReplyChange} />
-                                    </Form.Group>
+                <p style={{ fontSize: 20 }}>{`@${object.data.authorName}`}</p>
+                <p className={styles.fontLess}> {object.data.comment}</p>
 
-                                    {replyHandling ?
-                                        <Button variant="primary" style={{ marginTop: 15 }}>
-                                            <Spinner
-                                                as="span"
-                                                animation="border"
-                                                size="sm"
-                                                role="status"
-                                                aria-hidden="true"
-                                            />
-                                        </Button>
-                                        :
-                                        <Button variant="primary" type="submit" style={{ marginTop: 15 }}>
-                                            Reply
-                                        </Button>
-                                    }
 
-                                </Form>
-                            </Card.Body>
-                        </Card>
+                <p className={styles.fontLess}>
+                    <Button active={upvoted.includes(object.id)} size="sm" variant="outline-dark" onClick={() => {
+                        handleVote(true, object)
+                        setChanged(!changed)
+                    }}>
+                        ▲
+                    </Button>
+                    {' '}
+                    {object?.data?.upvotes ?
+                        object.data.upvotes
                         :
-                        <div></div>
+                        0
                     }
-                    {object.replies && object.replies.length > 0 ?
-                        feedView(object.replies)
-                        :
-                        <div></div>}
-                </Card.Body>
-            </Card>
+                    {' '}
+                    <Button active={downvoted.includes(object.id)} size="sm" variant="outline-dark" onClick={() => {
+                        handleVote(false, object)
+                        setChanged(!changed)
+                    }}>▼</Button>
+                    {' - '}
+                    <Button variant="light" size="sm" onClick={() => { setReply(object.id) }}>Reply</Button>
+                    {' '} - {message}
+                </p>
+
+
+
+                {reply == object.id ?
+                    <Card>
+                        <Card.Body>
+                            <Form onSubmit={handleReplySubmit}>
+
+                                <Form.Group controlId="description">
+                                    <Form.Control required as="textarea" rows={3} placeholder={`Replying to @${object.data.authorName}...`} onChange={handleReplyChange} />
+                                </Form.Group>
+
+                                {replyHandling ?
+                                    <Button variant="primary" style={{ marginTop: 15 }}>
+                                        <Spinner
+                                            as="span"
+                                            animation="border"
+                                            size="sm"
+                                            role="status"
+                                            aria-hidden="true"
+                                        />
+                                    </Button>
+                                    :
+                                    <Button variant="primary" type="submit" style={{ marginTop: 15 }}>
+                                        Reply
+                                        </Button>
+                                }
+
+                            </Form>
+                        </Card.Body>
+                    </Card>
+                    :
+                    <div></div>
+                }
+                {object.replies && object.replies.length > 0 ?
+                    feedView(object.replies)
+                    :
+                    <div></div>}
+
+            </div>
 
             //
         )
     }
 
     //list of feed objects
-    const feedView = (feedList: { id: string; data: { comment: string; timestamp: { seconds: number; nanoseconds: number }; author: string; authorName: string; parent: string; thread: string }; replies: any[] }[]) => {
-        const feedItems = feedList.map((object: { id: string; data: { comment: string; timestamp: { seconds: number, nanoseconds: number }; author: string; authorName: string; parent: string; thread: string }; replies: any[] }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
+    const feedView = (feedList: { id: string; data: { comment: string; timestamp: { seconds: number; nanoseconds: number }; author: string; authorName: string; parent: string; thread: string; upvotes: number }; replies: any[] }[]) => {
+        const feedItems = feedList.map((object: { id: string; data: { comment: string; timestamp: { seconds: number, nanoseconds: number }; author: string; authorName: string; parent: string; thread: string; upvotes: number }; replies: any[] }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
         )
         return feedItems
     }
@@ -304,10 +430,34 @@ const QuestionPage: React.FC = (props) => {
                 <Container className={styles.paddingTop}>
                     <Card style={{ marginBottom: 30 }}>
                         <Card.Body>
-                            <Card.Title>{post?.title}</Card.Title>
-                            <Card.Subtitle>{channelView(post)}</Card.Subtitle>
-                            <Card.Text>{post?.desc}</Card.Text>
-                            <Card.Text className={styles.fontLess}>Posted by <a href={`/user/${post?.authorName}`}>{`@${post?.authorName}`}</a> {timeMessage}</Card.Text>
+                            <Row>
+                                <Col>
+                                    <Card.Title>{post?.title}</Card.Title>
+                                    <Card.Subtitle>{channelView(post)}</Card.Subtitle>
+                                    <Card.Text>{post?.desc}</Card.Text>
+                                </Col>
+                                <Col xs={3} sm={2} style={{ textAlign: 'center' }}>
+                                    <Button active={upvoted.includes(postid)} size="sm" variant="outline-dark" onClick={() => {
+                                        handleVote(true, post)
+                                        setChanged(!changed)
+                                    }}>
+                                        ▲
+                                    </Button>
+                                    <p>{post?.upvotes ?
+                                        post?.upvotes
+                                        :
+                                        0
+                                    }
+                                    </p>
+                                    <Button active={downvoted.includes(postid)} size="sm" variant="outline-dark" onClick={() => {
+                                        handleVote(false, post)
+                                        setChanged(!changed)
+                                    }}>▼</Button>
+                                </Col>
+                            </Row>
+
+
+                            <Card.Text className={styles.fontLess} style={{ paddingTop: 10 }}>Posted by <a href={`/user/${post?.authorName}`}>{`@${post?.authorName}`}</a> {timeMessage}</Card.Text>
                         </Card.Body>
                     </Card>
 
@@ -318,7 +468,7 @@ const QuestionPage: React.FC = (props) => {
 
                                 <Form.Group controlId="description">
                                     <Form.Label>Answer</Form.Label>
-                                    <Form.Control as="textarea" rows={3} placeholder="" onChange={handleAnswerChange} />
+                                    <Form.Control required as="textarea" rows={3} placeholder="" onChange={handleAnswerChange} />
                                 </Form.Group>
 
                                 {handling ?
@@ -349,23 +499,25 @@ const QuestionPage: React.FC = (props) => {
 
 
 
-                    {commentsDone
-                        ?
+                    {comments ?
                         <div>
                             {numComments == 1 ?
-                                <h3 style={{ paddingTop: 50, paddingLeft: 22, paddingBottom: 15 }}>{numComments} comment</h3>
+                                <h3 style={{ paddingTop: 30, paddingLeft: 22, paddingBottom: 15 }}>{numComments} comment</h3>
                                 :
-                                <h3 style={{ paddingTop: 50, paddingLeft: 22, paddingBottom: 15 }}>{numComments} comments</h3>
+                                <h3 style={{ paddingTop: 30, paddingLeft: 22, paddingBottom: 15 }}>{numComments} comments</h3>
                             }
 
-                            {comments ?
-                                feedView(comments)
-                                :
-                                <Spinner animation="border" />}
+                            {feedView(comments)}
                         </div>
                         :
-                        <Spinner animation="border" />
+                        commentsDone ?
+                            <div>
+                                <h3 style={{ paddingTop: 30, paddingLeft: 22, paddingBottom: 15 }}>{numComments} comments</h3>
+                            </div>
+                            :
+                            <Spinner style={{ marginTop: 30, marginLeft: 30 }} animation="border" />
                     }
+
                 </Container>
                 :
                 loadingDone ?
@@ -374,7 +526,7 @@ const QuestionPage: React.FC = (props) => {
                     </Container>
                     :
                     <Container className={styles.paddingTop}>
-                        <Spinner animation="border" />
+                        <Spinner style={{ marginTop: 30, marginLeft: 30 }} animation="border" />
                     </Container>
             }
 
