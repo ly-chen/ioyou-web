@@ -93,6 +93,7 @@ const HomePage: React.FC = () => {
 
             if (posts?.empty || posts == null) {
                 console.log('No matching documents')
+                setLoading(true)
                 return;
             } else {
                 console.log('posts = ', posts)
@@ -293,7 +294,7 @@ const HomePage: React.FC = () => {
 
                         </Col>
                         <Col xs={3} sm={2}>
-                            <Button active={upvoted.includes(object.id)} variant="outline-dark" onClick={() => {
+                            <Button size="sm" active={upvoted.includes(object.id)} variant="outline-dark" onClick={() => {
                                 handleVote(true)
                                 setChanged(!changed)
                             }}>
@@ -305,14 +306,14 @@ const HomePage: React.FC = () => {
                                 0
                             }
                             </p>
-                            <Button active={downvoted.includes(object.id)} variant="outline-dark" onClick={() => {
+                            <Button size="sm" active={downvoted.includes(object.id)} variant="outline-dark" onClick={() => {
                                 handleVote(false)
                                 setChanged(!changed)
                             }}>▼</Button>
                         </Col>
                     </Row>
 
-                    <Card.Text className={styles.fontLess}>
+                    <Card.Text className={styles.fontLess} style={{ paddingTop: 10 }}>
                         {object.numComments == 1 ?
                             <a href={`/post/${object.id}`}>{object.numComments} comment</a>
                             :

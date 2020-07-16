@@ -34,6 +34,8 @@ const QuestionPage: React.FC = (props) => {
     const [replyText, setReplyText] = useState<string>('')
     const [replyHandling, setReplyHandling] = useState<boolean>(false);
 
+    const [changed, setChanged] = useState<boolean>(false);
+
     const getComments = async (id: string) => {
         try {
             var docList: any[] = []
@@ -148,6 +150,7 @@ const QuestionPage: React.FC = (props) => {
         const newReply = { comment: replyText, parent: reply, thread: postid, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, authorName: self.username }
         await functions().httpsCallable('createComment')(newReply).then(async () => {
             setComments(await getComments(postid))
+            setNumComments(numComments + 1)
             setCommentsDone(true);
             setReplyHandling(false);
             setReply('');
@@ -161,6 +164,7 @@ const QuestionPage: React.FC = (props) => {
         const newComment = { comment: answer, parent: postid, thread: postid, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, authorName: self.username }
         await functions().httpsCallable('createComment')(newComment).then(async () => {
             setComments(await getComments(postid))
+            setNumComments(numComments + 1)
             setCommentsDone(true);
             setHandling(false);
             setActiveAnswer(false);
@@ -194,51 +198,51 @@ const QuestionPage: React.FC = (props) => {
 
         return (
 
-            <Card style={{ marginBottom: 20 }}>
-                <Card.Body>
-                    <Card.Title>{`@${object.data.authorName}`}</Card.Title>
-                    <Card.Text className={styles.fontLess}> {object.data.comment}</Card.Text>
-                    <Card.Text className={styles.fontLess}>
-                        <Button variant="light" size="sm" onClick={() => { setReply(object.id) }}>Reply</Button>
-                        {' '} - {message}
-                    </Card.Text>
-                    {reply == object.id ?
-                        <Card>
-                            <Card.Body>
-                                <Form onSubmit={handleReplySubmit}>
+            <div className={styles.borderLeft} style={{ marginBottom: 10, paddingLeft: 10, paddingTop: 10 }}>
 
-                                    <Form.Group controlId="description">
-                                        <Form.Control as="textarea" rows={3} placeholder={`Replying to @${object.data.authorName}...`} onChange={handleReplyChange} />
-                                    </Form.Group>
+                <p style={{ fontSize: 20 }}>{`@${object.data.authorName}`}</p>
+                <p className={styles.fontLess}> {object.data.comment}</p>
+                <p className={styles.fontLess}>
+                    <Button variant="light" size="sm" onClick={() => { setReply(object.id) }}>Reply</Button>
+                    {' '} - {message}
+                </p>
+                {reply == object.id ?
+                    <Card>
+                        <Card.Body>
+                            <Form onSubmit={handleReplySubmit}>
 
-                                    {replyHandling ?
-                                        <Button variant="primary" style={{ marginTop: 15 }}>
-                                            <Spinner
-                                                as="span"
-                                                animation="border"
-                                                size="sm"
-                                                role="status"
-                                                aria-hidden="true"
-                                            />
+                                <Form.Group controlId="description">
+                                    <Form.Control required as="textarea" rows={3} placeholder={`Replying to @${object.data.authorName}...`} onChange={handleReplyChange} />
+                                </Form.Group>
+
+                                {replyHandling ?
+                                    <Button variant="primary" style={{ marginTop: 15 }}>
+                                        <Spinner
+                                            as="span"
+                                            animation="border"
+                                            size="sm"
+                                            role="status"
+                                            aria-hidden="true"
+                                        />
+                                    </Button>
+                                    :
+                                    <Button variant="primary" type="submit" style={{ marginTop: 15 }}>
+                                        Reply
                                         </Button>
-                                        :
-                                        <Button variant="primary" type="submit" style={{ marginTop: 15 }}>
-                                            Reply
-                                        </Button>
-                                    }
+                                }
 
-                                </Form>
-                            </Card.Body>
-                        </Card>
-                        :
-                        <div></div>
-                    }
-                    {object.replies && object.replies.length > 0 ?
-                        feedView(object.replies)
-                        :
-                        <div></div>}
-                </Card.Body>
-            </Card>
+                            </Form>
+                        </Card.Body>
+                    </Card>
+                    :
+                    <div></div>
+                }
+                {object.replies && object.replies.length > 0 ?
+                    feedView(object.replies)
+                    :
+                    <div></div>}
+
+            </div>
 
             //
         )
@@ -304,10 +308,34 @@ const QuestionPage: React.FC = (props) => {
                 <Container className={styles.paddingTop}>
                     <Card style={{ marginBottom: 30 }}>
                         <Card.Body>
-                            <Card.Title>{post?.title}</Card.Title>
-                            <Card.Subtitle>{channelView(post)}</Card.Subtitle>
-                            <Card.Text>{post?.desc}</Card.Text>
-                            <Card.Text className={styles.fontLess}>Posted by <a href={`/user/${post?.authorName}`}>{`@${post?.authorName}`}</a> {timeMessage}</Card.Text>
+                            <Row>
+                                <Col>
+                                    <Card.Title>{post?.title}</Card.Title>
+                                    <Card.Subtitle>{channelView(post)}</Card.Subtitle>
+                                    <Card.Text>{post?.desc}</Card.Text>
+                                </Col>
+                                <Col xs={3} sm={2}>
+                                    <Button size="sm" variant="outline-dark" onClick={() => {
+                                        //handleVote(true)
+                                        setChanged(!changed)
+                                    }}>
+                                        ▲
+                                    </Button>
+                                    <p>{post?.upvotes ?
+                                        post?.upvotes
+                                        :
+                                        0
+                                    }
+                                    </p>
+                                    <Button size="sm" variant="outline-dark" onClick={() => {
+                                        //handleVote(false)
+                                        setChanged(!changed)
+                                    }}>▼</Button>
+                                </Col>
+                            </Row>
+
+
+                            <Card.Text className={styles.fontLess} style={{ paddingTop: 10 }}>Posted by <a href={`/user/${post?.authorName}`}>{`@${post?.authorName}`}</a> {timeMessage}</Card.Text>
                         </Card.Body>
                     </Card>
 
@@ -318,7 +346,7 @@ const QuestionPage: React.FC = (props) => {
 
                                 <Form.Group controlId="description">
                                     <Form.Label>Answer</Form.Label>
-                                    <Form.Control as="textarea" rows={3} placeholder="" onChange={handleAnswerChange} />
+                                    <Form.Control required as="textarea" rows={3} placeholder="" onChange={handleAnswerChange} />
                                 </Form.Group>
 
                                 {handling ?
@@ -349,23 +377,25 @@ const QuestionPage: React.FC = (props) => {
 
 
 
-                    {commentsDone
-                        ?
+                    {comments ?
                         <div>
                             {numComments == 1 ?
-                                <h3 style={{ paddingTop: 50, paddingLeft: 22, paddingBottom: 15 }}>{numComments} comment</h3>
+                                <h3 style={{ paddingTop: 30, paddingLeft: 22, paddingBottom: 15 }}>{numComments} comment</h3>
                                 :
-                                <h3 style={{ paddingTop: 50, paddingLeft: 22, paddingBottom: 15 }}>{numComments} comments</h3>
+                                <h3 style={{ paddingTop: 30, paddingLeft: 22, paddingBottom: 15 }}>{numComments} comments</h3>
                             }
 
-                            {comments ?
-                                feedView(comments)
-                                :
-                                <Spinner animation="border" />}
+                            {feedView(comments)}
                         </div>
                         :
-                        <Spinner animation="border" />
+                        commentsDone ?
+                            <div>
+                                <h3 style={{ paddingTop: 30, paddingLeft: 22, paddingBottom: 15 }}>{numComments} comments</h3>
+                            </div>
+                            :
+                            <Spinner style={{ marginTop: 30, marginLeft: 30 }} animation="border" />
                     }
+
                 </Container>
                 :
                 loadingDone ?
@@ -374,7 +404,7 @@ const QuestionPage: React.FC = (props) => {
                     </Container>
                     :
                     <Container className={styles.paddingTop}>
-                        <Spinner animation="border" />
+                        <Spinner style={{ marginTop: 30, marginLeft: 30 }} animation="border" />
                     </Container>
             }
 
