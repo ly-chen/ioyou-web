@@ -8,11 +8,11 @@ const HomePage: React.FC = () => {
     const firebase = useFirebase()
     const session = useSession()
 
-    const [allFeed, setAllFeed] = useState<any>(null)
-    const [homeFeed, setHomeFeed] = useState<any>(null)
-    const [academic, setAcademic] = useState<any>(null)
-    const [bulletin, setBulletin] = useState<any>(null)
-    const [channels, setChannels] = useState<Array<string>>([])
+    const [allFeed, setAllFeed] = useState<any[]>([])
+    const [homeFeed, setHomeFeed] = useState<any[]>([])
+    const [academic, setAcademic] = useState<any[]>([])
+    const [bulletin, setBulletin] = useState<any[]>([])
+    const [channels, setChannels] = useState<string[] | undefined>(undefined)
 
     const [allLoadingDone, setAllLoadingDone] = useState<boolean>(false);
     const [homeLoadingDone, setHomeLoadingDone] = useState<boolean>(false);
@@ -21,6 +21,118 @@ const HomePage: React.FC = () => {
 
     const [nowSeconds, setNowSeconds] = useState<number>(0);
 
+    const [lastAll, setLastAll] = useState<any>(null);
+    const [lastHome, setLastHome] = useState<any>(null);
+    const [lastAcad, setLastAcad] = useState<any>(null);
+    const [lastBul, setLastBul] = useState<any>(null);
+
+    const getChannels = async () => {
+        try {
+            const user = await firebase.db.collection('users').doc(session.auth?.uid).get()
+            console.log('user = ', user.data())
+            const channelList = user.data()?.actives
+            console.log('channelList = ', channelList)
+            console.log('object.keys() = ', Object.keys(channelList).filter((key) => {
+                return channelList[key] == true;
+            }))
+            return Object.keys(channelList).filter((key) => {
+                return channelList[key] == true;
+            })
+        } catch (e) {
+            console.log(e)
+        }
+    }
+
+    const getPosts = async (sort: string, category: string, lastCategory: any, setLastCategory: any, setCategoryFeed: any, setLoading: any, subjects: string[] | undefined) => {
+        try {
+            var docList: any[] = []
+            var query = firebase.db.collection('posts').orderBy(sort, "desc")
+
+            let posts = null;
+            console.log('subjects =', subjects)
+            if (category === 'all') {
+                if (lastCategory) {
+                    const lastTime = lastCategory.data().timestamp.seconds
+                    posts = await query.startAfter(lastTime).limit(10).get()
+                } else {
+                    posts = await query.limit(10).get()
+                }
+
+
+            } else {
+                if (subjects == undefined || subjects?.length == 0) {
+                    posts = null
+                    setLoading(true)
+                    return
+                } else {
+                    if (lastCategory) {
+                        const lastTime = lastCategory.data().timestamp.seconds
+                        posts = await query.startAfter(lastTime).where('channels', 'array-contains-any', subjects).limit(10).get()
+                    } else {
+                        posts = await query.where('channels', 'array-contains-any', subjects).limit(10).get()
+                    }
+
+                }
+            }
+
+
+            if (posts?.empty || posts == null) {
+                console.log('No matching documents')
+                return;
+            } else {
+                console.log('posts = ', posts)
+                const lastPost = posts.docs[posts.docs.length - 1]
+                setLastCategory(lastPost)
+            }
+
+            posts.forEach(doc => {
+                docList = [...docList, { id: doc.id, data: doc.data() }];
+            });
+
+
+            for (let i = 0; i < docList.length; i++) {
+                const doc = docList[i]
+                const numComments = await firebase.db.collection('comments').where('thread', '==', doc.id).get()
+                docList[i] = { id: doc.id, data: doc.data, numComments: numComments.size }
+            }
+
+            if (category === 'all') {
+                setAllFeed([...allFeed, ...docList])
+                setAllLoadingDone(true)
+            }
+            if (category === 'home') {
+                setHomeFeed([...homeFeed, ...docList])
+                setHomeLoadingDone(true)
+            }
+            if (category === 'academic') {
+                setAcademic([...academic, ...docList])
+                setAcadLoadingDone(true)
+            }
+            if (category === 'bulletin') {
+                setBulletin([...bulletin, ...docList])
+                setBulLoadingDone(true)
+            }
+        } catch (e) {
+            console.log(e)
+        }
+    }
+
+    const loadPosts = async () => {
+        let subjects: string[] | undefined = []
+        if (session.auth) {
+            subjects = await getChannels()
+        }
+
+        setChannels(subjects)
+
+        getPosts('timestamp.seconds', 'all', lastAll, setLastAll, setAllFeed, setAllLoadingDone, subjects)
+        getPosts('timestamp.seconds', 'home', lastHome, setLastHome, setHomeFeed, setHomeLoadingDone, subjects)
+        getPosts('timestamp.seconds', 'academic', lastAcad, setLastAcad, setAcademic, setAcadLoadingDone, subjects)
+        getPosts('timestamp.seconds', 'bulletin', lastBul, setLastBul, setBulletin, setBulLoadingDone, subjects)
+
+        console.log('subjects = ', subjects)
+    }
+
     useEffect(() => {
         var now = new Date();
         var seconds = ((now.getTime()) * .001) >> 0;
@@ -28,103 +140,8 @@ const HomePage: React.FC = () => {
 
         console.log(seconds)
         //retrieves the most recent 10 posts
-        const getChannels = async () => {
-            try {
-                const user = await firebase.db.collection('users').doc(session.auth?.uid).get()
-                console.log('user = ', user.data())
-                const channelList = user.data()?.actives
-                console.log('channelList = ', channelList)
-                console.log('object.keys() = ', Object.keys(channelList).filter((key) => {
-                    return channelList[key] == true;
-                }))
-                return Object.keys(channelList).filter((key) => {
-                    return channelList[key] == true;
-                })
-            } catch (e) {
-                console.log(e)
-            }
-        }
-
-        const getPosts = async (sort: string, category: string, subjects: string[] | undefined) => {
-            try {
-                var docList: any[] = []
-                const query = firebase.db.collection('posts').orderBy(sort, "desc")
-
-                let posts = null;
-                console.log('subjects =', subjects)
-                if (subjects == undefined || subjects?.length == 0) {
-                    if (category === 'home') {
-                        posts = null
-                        setHomeLoadingDone(true)
-                    } else {
-                        posts = await query.limit(10).get()
-                    }
 
 
-                } else {
-                    if (category === 'home') {
-                        posts = await query.where('channels', 'array-contains-any', subjects).limit(10).get()
-                        console.log('posts = ', posts)
-                    } else {
-                        posts = await query.limit(10).get()
-                    }
-                }
-
-                if (posts?.empty || posts == null) {
-                    console.log('No matching documents')
-                    return;
-                }
-
-                posts.forEach(doc => {
-                    docList = [...docList, { id: doc.id, data: doc.data() }];
-                });
-
-                for (let i = 0; i < docList.length; i++) {
-                    const doc = docList[i]
-                    const numComments = await firebase.db.collection('comments').where('parent', '==', doc.id).get()
-                    docList[i] = { id: doc.id, data: doc.data, numComments: numComments.size }
-                }
-
-                if (category === 'all') {
-                    setAllFeed(docList)
-                    setAllLoadingDone(true)
-                }
-                if (category === 'home') {
-                    setHomeFeed(docList)
-                    setHomeLoadingDone(true)
-                }
-                if (category === 'academic') {
-                    setAcademic(docList)
-                    setAcadLoadingDone(true)
-                }
-                if (category === 'bulletin') {
-                    setBulletin(docList)
-                    setBulLoadingDone(true)
-                }
-            } catch (e) {
-                console.log(e)
-            }
-        }
-
-        const loadPosts = async () => {
-            let subjects: string[] | undefined = []
-            if (session.auth) {
-                subjects = await getChannels()
-            }
-
-            if (subjects == [] || subjects == undefined) {
-                getPosts('timestamp.seconds', 'all', undefined)
-                getPosts('timestamp.seconds', 'home', undefined)
-                getPosts('timestamp.seconds', 'academic', undefined)
-                getPosts('timestamp.seconds', 'bulletin', undefined)
-            } else {
-                getPosts('timestamp.seconds', 'all', subjects)
-                getPosts('timestamp.seconds', 'home', subjects)
-                getPosts('timestamp.seconds', 'academic', subjects)
-                getPosts('timestamp.seconds', 'bulletin', subjects)
-            }
-            console.log('subjects = ', subjects)
-        }
 
         loadPosts()
     }, [session, firebase])
@@ -293,8 +310,12 @@ const HomePage: React.FC = () => {
                 <Tabs defaultActiveKey={session.auth ? 'Home' : 'All'} id="feed-nav">
                     <Tab eventKey="All" title="All">
                         {
-                            allFeed ?
-                                feedView(allFeed)
+                            allFeed[0] ?
+                                <div>
+                                    {feedView(allFeed)}
+                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'all', lastAll, setLastAll, setAllFeed, setAllLoadingDone, channels) }}>Load more</Button>
+                                </div>
+
                                 :
                                 allLoadingDone ?
                                     <Card style={{ marginTop: 15 }}>
@@ -305,11 +326,16 @@ const HomePage: React.FC = () => {
                                     :
                                     feedLoadingView()
                         }
+
                     </Tab>
                     <Tab eventKey="Home" title="Home">
                         {
-                            homeFeed ?
-                                feedView(homeFeed)
+                            homeFeed[0] ?
+                                <div>
+                                    {feedView(homeFeed)}
+                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'home', lastHome, setLastHome, setHomeFeed, setHomeLoadingDone, channels) }}>Load more</Button>
+                                </div>
+
                                 :
                                 homeLoadingDone ?
                                     session.auth ?
@@ -327,11 +353,16 @@ const HomePage: React.FC = () => {
                                     :
                                     feedLoadingView()
                         }
+
                     </Tab>
                     <Tab eventKey="Academic" title="Academic">
                         {
-                            academic ?
-                                feedView(academic)
+                            academic[0] ?
+                                <div>
+                                    {feedView(academic)}
+                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'academic', lastAcad, setLastAcad, setAcademic, setAcadLoadingDone, channels) }}>Load more</Button>
+                                </div>
+
                                 :
                                 acadLoadingDone ?
                                     session.auth ?
@@ -349,11 +380,16 @@ const HomePage: React.FC = () => {
                                     :
                                     feedLoadingView()
                         }
+
                     </Tab>
                     <Tab eventKey="Bulletin" title="Bulletin">
                         {
-                            bulletin ?
-                                feedView(bulletin)
+                            bulletin[0] ?
+                                <div>
+                                    {feedView(bulletin)}
+                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'bulletin', lastBul, setLastBul, setBulletin, setBulLoadingDone, channels) }}>Load more</Button>
+                                </div>
+
                                 :
                                 bulLoadingDone ?
                                     <Card style={{ marginTop: 15 }}>
@@ -364,6 +400,7 @@ const HomePage: React.FC = () => {
                                     :
                                     feedLoadingView()
                         }
+
                     </Tab>
                 </Tabs>
             </Container>
