@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { useFirebase, Firebase } from '../Firebase'
 import { functions, auth, firestore } from 'firebase'
-import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card } from 'react-bootstrap'
+import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card, Tabs, Tab } from 'react-bootstrap'
 import { useSession } from '../Session'
 import styles from './Home.module.css'
 
@@ -146,7 +146,7 @@ const HomePage: React.FC = () => {
 
         loadPosts()
     }, [session, firebase])
-    
+
 
     //a feed object
     const feedCard = (object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string }; numComments: number }) => {
