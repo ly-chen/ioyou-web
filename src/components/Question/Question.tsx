@@ -36,10 +36,13 @@ const QuestionPage: React.FC = (props) => {
 
     const [changed, setChanged] = useState<boolean>(false);
 
+    const [upvoted, setUpvoted] = useState<string[]>([])
+    const [downvoted, setDownvoted] = useState<string[]>([])
+
     const getComments = async (id: string) => {
         try {
             var docList: any[] = []
-            const commentsList = await firebase.db.collection('comments').where('parent', '==', id).limit(10).get()
+            const commentsList = await firebase.db.collection('comments').where('parent', '==', id).orderBy('upvotes', 'desc').limit(10).get()
 
             console.log('commentsList = ', commentsList)
             if (commentsList.empty || commentsList == null) {
@@ -65,7 +68,96 @@ const QuestionPage: React.FC = (props) => {
         }
     }
 
+    const handleVote = (upvoteTrue: boolean, object: any) => {
+        var collect = 'comments'
+        if (object == post) {
+            const newObject = { data: post, id: postid }
+            object = newObject
+            collect = 'posts'
+        }
+        var upvoteList: string[] = []
+        var downvoteList: string[] = []
+        var upvoteIndex = -1
+        var downvoteIndex = -1
+        console.log('userDoc = ', self)
+        if (self.upvoted) {
+            upvoteList = upvoted
+            upvoteIndex = upvoteList.indexOf(object.id)
+        }
+        if (self.downvoted) {
+            downvoteList = downvoted
+            downvoteIndex = downvoteList.indexOf(object.id)
+        }
+
+        console.log('upvoteIndex = ', upvoteIndex)
+
+        console.log('upvoteList = ', upvoteList)
+
+        console.log('downvoteIndex = ', downvoteIndex)
+
+        console.log('downvoteList = ', downvoteList)
+
+        var upvotes: number;
+        if (object.data.upvotes) {
+            upvotes = object.data.upvotes
+        } else {
+            upvotes = 0
+        }
+
+        if (upvoteTrue) {
+
+            if (upvoteIndex == -1) {
+                if (downvoteIndex != -1) {
+                    downvoteList.splice(downvoteIndex, 1)
+                    firebase.db.collection('users').doc(session.auth?.uid).update({ downvoted: downvoteList })
+                    upvotes = upvotes + 1
+                }
+                upvoteList = [...upvoteList, object.id]
+                console.log('upvoteList after adding = ', upvoteList)
+                upvotes = upvotes + 1
+
+            } else {
+                upvoteList.splice(upvoteIndex, 1)
+                console.log('upvoteList after splice = ', upvoteList)
+                upvotes = upvotes - 1
+            }
+            firebase.db.collection('users').doc(session.auth?.uid).update({ upvoted: upvoteList })
+
+            firebase.db.collection(collect).doc(object.id).update({ upvotes: upvotes })
+            object.data.upvotes = upvotes;
+        } else {
+            if (downvoteIndex == -1) {
+                if (upvoteIndex != -1) {
+                    upvoteList.splice(upvoteIndex, 1)
+                    firebase.db.collection('users').doc(session.auth?.uid).update({ upvoted: upvoteList })
+                    upvotes = upvotes - 1
+                }
+                downvoteList = [...downvoteList, object.id]
+                console.log('downvoteList after adding = ', downvoteList)
+                upvotes = upvotes - 1
+            } else {
+                downvoteList.splice(downvoteIndex, 1)
+                console.log('downvoteList after splice = ', downvoteList)
+                upvotes = upvotes + 1
+            }
+
+
+            firebase.db.collection('users').doc(session.auth?.uid).update({ downvoted: downvoteList })
+            firebase.db.collection(collect).doc(object.id).update({ upvotes: upvotes })
+            object.data.upvotes = upvotes;
+        }
+
+
+        if (upvoteList) {
+            setUpvoted(upvoteList)
+        }
+        if (downvoteList) {
+            setDownvoted(downvoteList)
+        }
+    }
+
     useEffect(() => {
+
         const setAllComments = async () => {
             const allComments = await firebase.db.collection('comments').where('thread', '==', postid).get()
             setNumComments(allComments.size)
@@ -81,6 +173,13 @@ const QuestionPage: React.FC = (props) => {
             const getSelf = async () => {
                 const selfDoc = await (await firestore().collection('users').doc(session.auth?.uid).get()).data()
                 setSelf(selfDoc)
+                if (selfDoc?.upvoted) {
+                    setUpvoted(selfDoc?.upvoted)
+                }
+                if (selfDoc?.downvoted) {
+                    setDownvoted(selfDoc?.downvoted)
+                }
+
             }
             getSelf();
         }
@@ -147,7 +246,7 @@ const QuestionPage: React.FC = (props) => {
         event.preventDefault()
         setReplyHandling(true);
         console.log(replyText)
-        const newReply = { comment: replyText, parent: reply, thread: postid, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, authorName: self.username }
+        const newReply = { comment: replyText, parent: reply, thread: postid, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, authorName: self.username, upvotes: 0 }
         await functions().httpsCallable('createComment')(newReply).then(async () => {
             setComments(await getComments(postid))
             setNumComments(numComments + 1)
@@ -161,7 +260,7 @@ const QuestionPage: React.FC = (props) => {
         event.preventDefault()
         setHandling(true);
         console.log(answer)
-        const newComment = { comment: answer, parent: postid, thread: postid, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, authorName: self.username }
+        const newComment = { comment: answer, parent: postid, thread: postid, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, authorName: self.username, upvotes: 0 }
         await functions().httpsCallable('createComment')(newComment).then(async () => {
             setComments(await getComments(postid))
             setNumComments(numComments + 1)
@@ -172,7 +271,7 @@ const QuestionPage: React.FC = (props) => {
     }
 
     //a feed object
-    const feedCard = (object: { id: string; data: { comment: string; timestamp: { seconds: number, nanoseconds: number }; author: string; authorName: string; parent: string; thread: string }; replies: any[] }) => {
+    const feedCard = (object: { id: string; data: { comment: string; timestamp: { seconds: number, nanoseconds: number }; author: string; authorName: string; parent: string; thread: string; upvotes: number }; replies: any[] }) => {
         var time = nowSeconds - object.data.timestamp.seconds;
         var message = ''
         if (time < 120) {
@@ -202,10 +301,33 @@ const QuestionPage: React.FC = (props) => {
 
                 <p style={{ fontSize: 20 }}>{`@${object.data.authorName}`}</p>
                 <p className={styles.fontLess}> {object.data.comment}</p>
+
+
                 <p className={styles.fontLess}>
+                    <Button active={upvoted.includes(object.id)} size="sm" variant="outline-dark" onClick={() => {
+                        handleVote(true, object)
+                        setChanged(!changed)
+                    }}>
+                        ▲
+                    </Button>
+                    {' '}
+                    {object?.data?.upvotes ?
+                        object.data.upvotes
+                        :
+                        0
+                    }
+                    {' '}
+                    <Button active={downvoted.includes(object.id)} size="sm" variant="outline-dark" onClick={() => {
+                        handleVote(false, object)
+                        setChanged(!changed)
+                    }}>▼</Button>
+                    {' - '}
                     <Button variant="light" size="sm" onClick={() => { setReply(object.id) }}>Reply</Button>
                     {' '} - {message}
                 </p>
+
+
+
                 {reply == object.id ?
                     <Card>
                         <Card.Body>
@@ -249,8 +371,8 @@ const QuestionPage: React.FC = (props) => {
     }
 
     //list of feed objects
-    const feedView = (feedList: { id: string; data: { comment: string; timestamp: { seconds: number; nanoseconds: number }; author: string; authorName: string; parent: string; thread: string }; replies: any[] }[]) => {
-        const feedItems = feedList.map((object: { id: string; data: { comment: string; timestamp: { seconds: number, nanoseconds: number }; author: string; authorName: string; parent: string; thread: string }; replies: any[] }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
+    const feedView = (feedList: { id: string; data: { comment: string; timestamp: { seconds: number; nanoseconds: number }; author: string; authorName: string; parent: string; thread: string; upvotes: number }; replies: any[] }[]) => {
+        const feedItems = feedList.map((object: { id: string; data: { comment: string; timestamp: { seconds: number, nanoseconds: number }; author: string; authorName: string; parent: string; thread: string; upvotes: number }; replies: any[] }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
         )
         return feedItems
     }
@@ -314,9 +436,9 @@ const QuestionPage: React.FC = (props) => {
                                     <Card.Subtitle>{channelView(post)}</Card.Subtitle>
                                     <Card.Text>{post?.desc}</Card.Text>
                                 </Col>
-                                <Col xs={3} sm={2}>
-                                    <Button size="sm" variant="outline-dark" onClick={() => {
-                                        //handleVote(true)
+                                <Col xs={3} sm={2} style={{ textAlign: 'center' }}>
+                                    <Button active={upvoted.includes(postid)} size="sm" variant="outline-dark" onClick={() => {
+                                        handleVote(true, post)
                                         setChanged(!changed)
                                     }}>
                                         ▲
@@ -327,8 +449,8 @@ const QuestionPage: React.FC = (props) => {
                                         0
                                     }
                                     </p>
-                                    <Button size="sm" variant="outline-dark" onClick={() => {
-                                        //handleVote(false)
+                                    <Button active={downvoted.includes(postid)} size="sm" variant="outline-dark" onClick={() => {
+                                        handleVote(false, post)
                                         setChanged(!changed)
                                     }}>▼</Button>
                                 </Col>

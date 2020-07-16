@@ -293,7 +293,7 @@ const HomePage: React.FC = () => {
                             <Card.Text className={styles.fontLess}> {object.data.desc}</Card.Text>
 
                         </Col>
-                        <Col xs={3} sm={2}>
+                        <Col xs={3} sm={2} style={{ textAlign: 'center' }}>
                             <Button size="sm" active={upvoted.includes(object.id)} variant="outline-dark" onClick={() => {
                                 handleVote(true)
                                 setChanged(!changed)
