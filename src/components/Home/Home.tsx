@@ -15,6 +15,8 @@ const HomePage: React.FC = () => {
     const [bulletin, setBulletin] = useState<any[]>([])
     const [channels, setChannels] = useState<string[] | undefined>(undefined)
 
+    const [userDoc, setUserDoc] = useState<any>(null)
+
     const [allLoadingDone, setAllLoadingDone] = useState<boolean>(false);
     const [homeLoadingDone, setHomeLoadingDone] = useState<boolean>(false);
     const [acadLoadingDone, setAcadLoadingDone] = useState<boolean>(false);
@@ -27,10 +29,22 @@ const HomePage: React.FC = () => {
     const [lastAcad, setLastAcad] = useState<any>(null);
     const [lastBul, setLastBul] = useState<any>(null);
 
+    const [upvoted, setUpvoted] = useState<string[]>([])
+    const [downvoted, setDownvoted] = useState<string[]>([])
+    const [changed, setChanged] = useState<boolean>(false);
+
     const getChannels = async () => {
         try {
             const user = await firebase.db.collection('users').doc(session.auth?.uid).get()
             console.log('user = ', user.data())
+            const userData = user.data()
+            setUserDoc(userData)
+            if (userData?.upvoted) {
+                setUpvoted(userData?.upvoted)
+            }
+            if (userData?.downvoted) {
+                setDownvoted(userData?.downvoted)
+            }
             const channelList = user.data()?.actives
             console.log('channelList = ', channelList)
             console.log('object.keys() = ', Object.keys(channelList).filter((key) => {
@@ -149,7 +163,7 @@ const HomePage: React.FC = () => {
 
 
     //a feed object
-    const feedCard = (object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string }; numComments: number }) => {
+    const feedCard = (object: { id: string; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string; upvotes: number }; numComments: number }) => {
 
         var time = nowSeconds - object.data.timestamp.seconds;
         var message = ''
@@ -183,15 +197,121 @@ const HomePage: React.FC = () => {
             )
         }
 
+        const handleVote = (upvoteTrue: boolean) => {
+            var upvoteList: string[] = []
+            var downvoteList: string[] = []
+            var upvoteIndex = -1
+            var downvoteIndex = -1
+            console.log('userDoc = ', userDoc)
+            if (userDoc.upvoted) {
+                upvoteList = upvoted
+                upvoteIndex = upvoteList.indexOf(object.id)
+            }
+            if (userDoc.downvoted) {
+                downvoteList = downvoted
+                downvoteIndex = downvoteList.indexOf(object.id)
+            }
+
+            console.log('upvoteIndex = ', upvoteIndex)
+
+            console.log('upvoteList = ', upvoteList)
+
+            console.log('downvoteIndex = ', downvoteIndex)
+
+            console.log('downvoteList = ', downvoteList)
+
+            var upvotes: number;
+            if (object.data.upvotes) {
+                upvotes = object.data.upvotes
+            } else {
+                upvotes = 0
+            }
+
+            if (upvoteTrue) {
+
+                if (upvoteIndex == -1) {
+                    if (downvoteIndex != -1) {
+                        downvoteList.splice(downvoteIndex, 1)
+                        firebase.db.collection('users').doc(session.auth?.uid).update({ downvoted: downvoteList })
+                        upvotes = upvotes + 1
+                    }
+                    upvoteList = [...upvoteList, object.id]
+                    console.log('upvoteList after adding = ', upvoteList)
+                    upvotes = upvotes + 1
+
+                } else {
+                    upvoteList.splice(upvoteIndex, 1)
+                    console.log('upvoteList after splice = ', upvoteList)
+                    upvotes = upvotes - 1
+                }
+                firebase.db.collection('users').doc(session.auth?.uid).update({ upvoted: upvoteList })
+
+                firebase.db.collection('posts').doc(object.id).update({ upvotes: upvotes })
+                object.data.upvotes = upvotes;
+            } else {
+                if (downvoteIndex == -1) {
+                    if (upvoteIndex != -1) {
+                        upvoteList.splice(upvoteIndex, 1)
+                        firebase.db.collection('users').doc(session.auth?.uid).update({ upvoted: upvoteList })
+                        upvotes = upvotes - 1
+                    }
+                    downvoteList = [...downvoteList, object.id]
+                    console.log('downvoteList after adding = ', downvoteList)
+                    upvotes = upvotes - 1
+                } else {
+                    downvoteList.splice(downvoteIndex, 1)
+                    console.log('downvoteList after splice = ', downvoteList)
+                    upvotes = upvotes + 1
+                }
+
+
+                firebase.db.collection('users').doc(session.auth?.uid).update({ downvoted: downvoteList })
+                firebase.db.collection('posts').doc(object.id).update({ upvotes: upvotes })
+                object.data.upvotes = upvotes;
+            }
+
+
+            if (upvoteList) {
+                setUpvoted(upvoteList)
+            }
+            if (downvoteList) {
+                setDownvoted(downvoteList)
+            }
+        }
+
         return (
 
             <Card style={{ marginBottom: 20 }}>
                 <Card.Body>
-                    <a href={`/post/${object.id}`}>
-                        <Card.Title>{object.data.title}</Card.Title>
-                    </a>
-                    <Card.Subtitle>{channelView()}</Card.Subtitle>
-                    <Card.Text className={styles.fontLess}> {object.data.desc}</Card.Text>
+                    <Row>
+                        <Col>
+                            <a href={`/post/${object.id}`}>
+                                <Card.Title>{object.data.title}</Card.Title>
+                            </a>
+                            <Card.Subtitle>{channelView()}</Card.Subtitle>
+                            <Card.Text className={styles.fontLess}> {object.data.desc}</Card.Text>
+
+                        </Col>
+                        <Col xs={3} sm={2}>
+                            <Button active={upvoted.includes(object.id)} variant="outline-dark" onClick={() => {
+                                handleVote(true)
+                                setChanged(!changed)
+                            }}>
+                                ▲
+                            </Button>
+                            <p>{object.data.upvotes ?
+                                object.data.upvotes
+                                :
+                                0
+                            }
+                            </p>
+                            <Button active={downvoted.includes(object.id)} variant="outline-dark" onClick={() => {
+                                handleVote(false)
+                                setChanged(!changed)
+                            }}>▼</Button>
+                        </Col>
+                    </Row>
+
                     <Card.Text className={styles.fontLess}>
                         {object.numComments == 1 ?
                             <a href={`/post/${object.id}`}>{object.numComments} comment</a>
@@ -253,8 +373,8 @@ const HomePage: React.FC = () => {
     }
 
     //list of feed objects
-    const feedView = (feedList: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number; nanoseconds: number }; author: string; channels: string[]; authorName: string }; numComments: number }[]) => {
-        const feedItems = feedList.map((object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string }; numComments: number }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
+    const feedView = (feedList: { id: string; data: { title: string; desc: string; timestamp: { seconds: number; nanoseconds: number }; author: string; channels: string[]; authorName: string; upvotes: number }; numComments: number }[]) => {
+        const feedItems = feedList.map((object: { id: string; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string; upvotes: number }; numComments: number }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
         )
         return feedItems
     }
