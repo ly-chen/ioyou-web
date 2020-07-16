@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { useFirebase, Firebase } from '../Firebase'
-import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card, Tabs, Tab } from 'react-bootstrap'
+import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card, Tabs, Tab, CardColumns } from 'react-bootstrap'
 import { useSession } from '../Session'
 import styles from './Home.module.css'
 
@@ -8,83 +8,168 @@ const HomePage: React.FC = () => {
     const firebase = useFirebase()
     const session = useSession()
 
-    const [allFeed, setAllFeed] = useState<any>(null)
-    const [homeFeed, setHomeFeed] = useState<any>(null)
-    const [academic, setAcademic] = useState<any>(null)
-    const [bulletin, setBulletin] = useState<any>(null)
-    const [channels, setChannels] = useState<Array<string>>([])
+    const [allFeed, setAllFeed] = useState<any[]>([])
+    const [homeFeed, setHomeFeed] = useState<any[]>([])
+    const [academic, setAcademic] = useState<any[]>([])
+    const [bulletin, setBulletin] = useState<any[]>([])
+    const [channels, setChannels] = useState<string[] | undefined>(undefined)
 
-    useEffect(() => {
-        //retrieves the most recent 10 posts
-        const getChannels = async () => {
-            try {
-                const user = await firebase.db.collection('users').doc(session.auth?.uid).get()
-                console.log('user = ', user.data())
-                const channelList = user.data()?.actives
-                console.log('channelList = ', channelList)
-                console.log('object.keys() = ', Object.keys(channelList).filter((key) => {
-                    return channelList[key] == true;
-                }))
-                return Object.keys(channelList).filter((key) => {
-                    return channelList[key] == true;
-                })
-            } catch (e) {
-                console.log(e)
-            }
+    const [allLoadingDone, setAllLoadingDone] = useState<boolean>(false);
+    const [homeLoadingDone, setHomeLoadingDone] = useState<boolean>(false);
+    const [acadLoadingDone, setAcadLoadingDone] = useState<boolean>(false);
+    const [bulLoadingDone, setBulLoadingDone] = useState<boolean>(false);
+
+    const [nowSeconds, setNowSeconds] = useState<number>(0);
+
+    const [lastAll, setLastAll] = useState<any>(null);
+    const [lastHome, setLastHome] = useState<any>(null);
+    const [lastAcad, setLastAcad] = useState<any>(null);
+    const [lastBul, setLastBul] = useState<any>(null);
+
+    const getChannels = async () => {
+        try {
+            const user = await firebase.db.collection('users').doc(session.auth?.uid).get()
+            console.log('user = ', user.data())
+            const channelList = user.data()?.actives
+            console.log('channelList = ', channelList)
+            console.log('object.keys() = ', Object.keys(channelList).filter((key) => {
+                return channelList[key] == true;
+            }))
+            return Object.keys(channelList).filter((key) => {
+                return channelList[key] == true;
+            })
+        } catch (e) {
+            console.log(e)
         }
+    }
 
-        const getPosts = async (sort: string, category: string, subjects: string[] | undefined) => {
-            try {
-                var docList: any[] = []
-                const query = firebase.db.collection('posts').orderBy(sort, "desc")
+    const getPosts = async (sort: string, category: string, lastCategory: any, setLastCategory: any, setCategoryFeed: any, setLoading: any, subjects: string[] | undefined) => {
+        try {
+            var docList: any[] = []
+            var query = firebase.db.collection('posts').orderBy(sort, "desc")
 
-                let posts = null;
-                if (category === 'home') {
-                    posts = await query.where('channels', 'array-contains-any', subjects).limit(10).get()
-                    console.log('posts = ', posts)
+            let posts = null;
+            console.log('subjects =', subjects)
+            if (category === 'all') {
+                if (lastCategory) {
+                    const lastTime = lastCategory.data().timestamp.seconds
+                    posts = await query.startAfter(lastTime).limit(10).get()
                 } else {
                     posts = await query.limit(10).get()
                 }
 
-                if (posts.empty || posts == null) {
-                    console.log('No matching documents')
-                    return;
-                }
-                posts.forEach(doc => {
-                    docList = [...docList, { id: doc.id, data: doc.data() }];
-                });
 
-                if (category === 'all') {
-                    setAllFeed(docList)
+            } else {
+                if (subjects == undefined || subjects?.length == 0) {
+                    posts = null
+                    setLoading(true)
+                    return
+                } else {
+                    if (lastCategory) {
+                        const lastTime = lastCategory.data().timestamp.seconds
+                        posts = await query.startAfter(lastTime).where('channels', 'array-contains-any', subjects).limit(10).get()
+                    } else {
+                        posts = await query.where('channels', 'array-contains-any', subjects).limit(10).get()
+                    }
+
                 }
-                if (category === 'home') {
-                    setHomeFeed(docList)
-                }
-                if (category === 'academic') {
-                    setAcademic(docList)
-                }
-                if (category === 'bulletin') {
-                    setBulletin(docList)
-                }
-            } catch (e) {
-                console.log(e)
             }
+
+
+            if (posts?.empty || posts == null) {
+                console.log('No matching documents')
+                return;
+            } else {
+                console.log('posts = ', posts)
+                const lastPost = posts.docs[posts.docs.length - 1]
+                setLastCategory(lastPost)
+            }
+
+            posts.forEach(doc => {
+                docList = [...docList, { id: doc.id, data: doc.data() }];
+            });
+
+
+            for (let i = 0; i < docList.length; i++) {
+                const doc = docList[i]
+                const numComments = await firebase.db.collection('comments').where('thread', '==', doc.id).get()
+                docList[i] = { id: doc.id, data: doc.data, numComments: numComments.size }
+            }
+
+            if (category === 'all') {
+                setAllFeed([...allFeed, ...docList])
+                setAllLoadingDone(true)
+            }
+            if (category === 'home') {
+                setHomeFeed([...homeFeed, ...docList])
+                setHomeLoadingDone(true)
+            }
+            if (category === 'academic') {
+                setAcademic([...academic, ...docList])
+                setAcadLoadingDone(true)
+            }
+            if (category === 'bulletin') {
+                setBulletin([...bulletin, ...docList])
+                setBulLoadingDone(true)
+            }
+        } catch (e) {
+            console.log(e)
+        }
+    }
+
+    const loadPosts = async () => {
+        let subjects: string[] | undefined = []
+        if (session.auth) {
+            subjects = await getChannels()
         }
 
-        const loadPosts = async () => {
-            const subjects = await getChannels()
-            console.log('subjects = ', subjects)
-            getPosts('timestamp.seconds', 'all', subjects)
-            getPosts('timestamp.seconds', 'home', subjects)
-            getPosts('timestamp.seconds', 'academic', subjects)
-            getPosts('timestamp.seconds', 'bulletin', subjects)
-        }
+        setChannels(subjects)
+
+        getPosts('timestamp.seconds', 'all', lastAll, setLastAll, setAllFeed, setAllLoadingDone, subjects)
+        getPosts('timestamp.seconds', 'home', lastHome, setLastHome, setHomeFeed, setHomeLoadingDone, subjects)
+        getPosts('timestamp.seconds', 'academic', lastAcad, setLastAcad, setAcademic, setAcadLoadingDone, subjects)
+        getPosts('timestamp.seconds', 'bulletin', lastBul, setLastBul, setBulletin, setBulLoadingDone, subjects)
+
+        console.log('subjects = ', subjects)
+    }
+
+    useEffect(() => {
+        var now = new Date();
+        var seconds = ((now.getTime()) * .001) >> 0;
+        setNowSeconds(seconds);
+
+        console.log(seconds)
+        //retrieves the most recent 10 posts
+
+
 
         loadPosts()
     }, [session, firebase])
 
     //a feed object
-    const feedCard = (object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string } }) => {
+    const feedCard = (object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string }; numComments: number }) => {
+
+        var time = nowSeconds - object.data.timestamp.seconds;
+        var message = ''
+        if (time < 120) {
+            message = 'about a minute ago'
+        } else if (time < 3600) {
+            message = `${Math.floor(time / 60)} minutes ago`
+        } else if (time < 86400) {
+            let curTime = Math.floor(time / 3600)
+            if (curTime == 1) {
+                message = 'about an hour ago'
+            } else {
+                message = `${curTime} hours ago`
+            }
+        } else {
+            let curTime = Math.floor(time / 86400)
+            if (curTime == 1) {
+                message = 'yesterday'
+            } else {
+                message = `${curTime} days ago`
+            }
+        }
 
         const channelView = () => {
             const subjectObjects = object.data.channels?.map((d) => <p key={d}>{(object.data.channels.indexOf(d) == 0) ? `#${d}` : `, #${d}`}</p>)
@@ -105,7 +190,15 @@ const HomePage: React.FC = () => {
                     </a>
                     <Card.Subtitle>{channelView()}</Card.Subtitle>
                     <Card.Text className={styles.fontLess}> {object.data.desc}</Card.Text>
-                    <Card.Text className={styles.fontLess}>Posted by {`@${object.data.authorName}`} at {object.data.timestamp.seconds}</Card.Text>
+                    <Card.Text className={styles.fontLess}>
+                        {object.numComments == 1 ?
+                            <a href={`/post/${object.id}`}>{object.numComments} comment</a>
+                            :
+                            <a href={`/post/${object.id}`}>{object.numComments} comments</a>
+                        }
+
+                        {' '} - posted by <a href={`/user/${object.data.authorName}`}>{`@${object.data.authorName}`}</a> - {message}
+                    </Card.Text>
                 </Card.Body>
             </Card>
 
@@ -159,8 +252,8 @@ const HomePage: React.FC = () => {
     }
 
     //list of feed objects
-    const feedView = (feedList: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number; nanoseconds: number }; author: string; channels: string[]; authorName: string } }[]) => {
-        const feedItems = feedList.map((object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string } }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
+    const feedView = (feedList: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number; nanoseconds: number }; author: string; channels: string[]; authorName: string }; numComments: number }[]) => {
+        const feedItems = feedList.map((object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string }; numComments: number }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
         )
         return feedItems
     }
@@ -183,7 +276,10 @@ const HomePage: React.FC = () => {
                                 Profile
                             </Button>
                             <Button href="/new" variant="outline-dark" style={{ marginRight: 10 }}>Create Post</Button>
-                            <Button variant="light" onClick={() => { firebase.doSignOut() }}>
+                            <Button variant="light" onClick={() => {
+                                firebase.doSignOut()
+                                window.location.reload()
+                            }}>
                                 sign out
                             </Button>
                         </div>
@@ -211,38 +307,100 @@ const HomePage: React.FC = () => {
 
                     </Col>
                 </Row>
-                <Tabs defaultActiveKey="Home" id="feed-nav">
+                <Tabs defaultActiveKey={session.auth ? 'Home' : 'All'} id="feed-nav">
                     <Tab eventKey="All" title="All">
                         {
-                            allFeed ?
-                                feedView(allFeed)
+                            allFeed[0] ?
+                                <div>
+                                    {feedView(allFeed)}
+                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'all', lastAll, setLastAll, setAllFeed, setAllLoadingDone, channels) }}>Load more</Button>
+                                </div>
+
                                 :
-                                feedLoadingView()
+                                allLoadingDone ?
+                                    <Card style={{ marginTop: 15 }}>
+                                        <Card.Body>
+                                            <Card.Text>We're encounter errors. Try again later?</Card.Text>
+                                        </Card.Body>
+                                    </Card>
+                                    :
+                                    feedLoadingView()
                         }
+
                     </Tab>
                     <Tab eventKey="Home" title="Home">
                         {
-                            homeFeed ?
-                                feedView(homeFeed)
+                            homeFeed[0] ?
+                                <div>
+                                    {feedView(homeFeed)}
+                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'home', lastHome, setLastHome, setHomeFeed, setHomeLoadingDone, channels) }}>Load more</Button>
+                                </div>
+
                                 :
-                                feedLoadingView()
+                                homeLoadingDone ?
+                                    session.auth ?
+                                        <Card style={{ marginTop: 15 }}>
+                                            <Card.Body>
+                                                <Card.Text>Subscribe to channels in your Profile page.</Card.Text>
+                                            </Card.Body>
+                                        </Card>
+                                        :
+                                        <Card style={{ marginTop: 15 }}>
+                                            <Card.Body>
+                                                <Card.Text>Create an account to subscribe to specific channels.</Card.Text>
+                                            </Card.Body>
+                                        </Card>
+                                    :
+                                    feedLoadingView()
                         }
+
                     </Tab>
                     <Tab eventKey="Academic" title="Academic">
                         {
-                            academic ?
-                                feedView(academic)
+                            academic[0] ?
+                                <div>
+                                    {feedView(academic)}
+                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'academic', lastAcad, setLastAcad, setAcademic, setAcadLoadingDone, channels) }}>Load more</Button>
+                                </div>
+
                                 :
-                                feedLoadingView()
+                                acadLoadingDone ?
+                                    session.auth ?
+                                        <Card style={{ marginTop: 15 }}>
+                                            <Card.Body>
+                                                <Card.Text>Subscribe to channels in your Profile page.</Card.Text>
+                                            </Card.Body>
+                                        </Card>
+                                        :
+                                        <Card style={{ marginTop: 15 }}>
+                                            <Card.Body>
+                                                <Card.Text>Create an account to subscribe to specific channels.</Card.Text>
+                                            </Card.Body>
+                                        </Card>
+                                    :
+                                    feedLoadingView()
                         }
+
                     </Tab>
                     <Tab eventKey="Bulletin" title="Bulletin">
                         {
-                            bulletin ?
-                                feedView(bulletin)
+                            bulletin[0] ?
+                                <div>
+                                    {feedView(bulletin)}
+                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'bulletin', lastBul, setLastBul, setBulletin, setBulLoadingDone, channels) }}>Load more</Button>
+                                </div>
+
                                 :
-                                feedLoadingView()
+                                bulLoadingDone ?
+                                    <Card style={{ marginTop: 15 }}>
+                                        <Card.Body>
+                                            <Card.Text>We're encounter errors. Try again later?</Card.Text>
+                                        </Card.Body>
+                                    </Card>
+                                    :
+                                    feedLoadingView()
                         }
+
                     </Tab>
                 </Tabs>
             </Container>
