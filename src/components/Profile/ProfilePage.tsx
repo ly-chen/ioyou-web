@@ -24,11 +24,19 @@ const ProfilePage: React.FC = () => {
 
     const [history, setHistory] = useState<any>(null);
 
+    const [historyDone, setHistoryDone] = useState<boolean>(false);
+
+    const [nowSeconds, setNowSeconds] = useState<number>(0);
+
 
     //list of subjects
     const [actives, setActives] = useState<any>({});
 
     useEffect(() => {
+        var now = new Date();
+        var seconds = ((now.getTime()) * .001) >> 0;
+        setNowSeconds(seconds);
+
         const getUser = async () => {
             const results = await firestore().collection('users').where('username', '==', username).limit(1).get();
             if (results.empty) {
@@ -65,17 +73,25 @@ const ProfilePage: React.FC = () => {
 
                         if (posts.empty || posts == null) {
                             console.log('No matching documents')
+                            setHistoryDone(true);
                             return;
                         }
                         posts.forEach(doc => {
                             docList = [...docList, { id: doc.id, data: doc.data() }];
                         });
 
+                        for (let i = 0; i < docList.length; i++) {
+                            const doc = docList[i]
+                            const numComments = await firebase.db.collection('comments').where('parent', '==', doc.id).get()
+                            docList[i] = { id: doc.id, data: doc.data, numComments: numComments.size }
+                        }
+
                         setHistory(docList)
                         console.log('docList = ', docList)
-
+                        setHistoryDone(true)
                     } catch (e) {
                         console.log(e)
+                        setHistoryDone(true)
                     }
                 }
 
@@ -102,18 +118,17 @@ const ProfilePage: React.FC = () => {
     }, [session, firebase])
 
     const subjectsView = () => {
+        console.log('subjectsView is triggered')
         const subjectObjects = Object.entries(actives).map(([keyName, keyIndex]) =>
             // use keyName to get current key's name
             // and a[keyName] to get its value
-            <div key={keyName}>
-                {actives[keyName] ?
-                    <Button active variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>{keyName}</Button>
-                    :
-                    <div></div>
-                }
+            actives[keyName] ?
+                <Button key={keyName} active variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>{keyName}</Button>
+                :
+                <div key={keyName}></div>
 
-            </div>
         )
+        console.log('subjectObjects = ', subjectObjects)
         return (
             <Row style={{ paddingTop: 15, paddingLeft: 15 }}>
                 {subjectObjects}
@@ -135,7 +150,6 @@ const ProfilePage: React.FC = () => {
 
     const editSubjectsView = () => {
 
-        var bus = actives['Business']
         return (
             <Row style={{ paddingTop: 15, paddingLeft: 15 }}>
                 <Button active={actives['Arts']} variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}
@@ -331,7 +345,29 @@ const ProfilePage: React.FC = () => {
     }
 
     //a feed object
-    const feedCard = (object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string } }) => {
+    const feedCard = (object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string }; numComments: number }) => {
+
+        var time = nowSeconds - object.data.timestamp.seconds;
+        var message = ''
+        if (time < 120) {
+            message = 'about a minute ago'
+        } else if (time < 3600) {
+            message = `${Math.floor(time / 60)} minutes ago`
+        } else if (time < 86400) {
+            let curTime = Math.floor(time / 3600)
+            if (curTime == 1) {
+                message = 'about an hour ago'
+            } else {
+                message = `${curTime} hours ago`
+            }
+        } else {
+            let curTime = Math.floor(time / 86400)
+            if (curTime == 1) {
+                message = 'yesterday'
+            } else {
+                message = `${curTime} days ago`
+            }
+        }
 
         const channelView = () => {
             const subjectObjects = object.data.channels?.map((d) => <p key={d}>{(object.data.channels.indexOf(d) == 0) ? `#${d}` : `, #${d}`}</p>)
@@ -352,7 +388,13 @@ const ProfilePage: React.FC = () => {
                     </a>
                     <Card.Subtitle>{channelView()}</Card.Subtitle>
                     <Card.Text className={styles.fontLess}> {object.data.desc}</Card.Text>
-                    <Card.Text className={styles.fontLess}>Posted by {`@${object.data.authorName}`} at {object.data.timestamp.seconds}</Card.Text>
+                    <Card.Text className={styles.fontLess}>{object.numComments == 1 ?
+                        <a href={`/post/${object.id}`}>{object.numComments} comment</a>
+                        :
+                        <a href={`/post/${object.id}`}>{object.numComments} comments</a>
+                    }
+
+                        {' '} - posted by <a href={`/user/${object.data.authorName}`}>{`@${object.data.authorName}`}</a> - {message}</Card.Text>
                 </Card.Body>
             </Card>
 
@@ -361,12 +403,13 @@ const ProfilePage: React.FC = () => {
     }
 
     //list of feed objects
-    const feedView = (feedList: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number; nanoseconds: number }; author: string; channels: string[]; authorName: string } }[]) => {
-        const feedItems = feedList.map((object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string } }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
+    const feedView = (feedList: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number; nanoseconds: number }; author: string; channels: string[]; authorName: string }; numComments: number }[]) => {
+        const feedItems = feedList.map((object: { id: string | number | undefined; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string }; numComments: number }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
         )
         return feedItems
     }
 
+    console.log('actives = ', actives);
     return (
         <div>
             <Navbar bg="light" variant="light">
@@ -385,7 +428,10 @@ const ProfilePage: React.FC = () => {
                                 Profile
                             </Button>
                             <Button href="/post" variant="outline-dark" style={{ marginRight: 10 }}>Create Post</Button>
-                            <Button variant="light" onClick={() => { firebase.doSignOut() }}>
+                            <Button variant="light" onClick={() => {
+                                setUserSelf(false);
+                                firebase.doSignOut()
+                            }}>
                                 sign out
                             </Button>
                         </div>
@@ -448,21 +494,28 @@ const ProfilePage: React.FC = () => {
                                         actives ?
                                             subjectsView()
                                             :
-                                            <div></div>
+                                            <div>This is triggering</div>
                                 }
                             </Card.Body>
 
                         </Card>
 
+                        <h2 style={{ paddingTop: 50, paddingLeft: 22 }}>Post History</h2>
+
                         {history
                             ?
                             <div>
-                                <h2 style={{ marginTop: 40, marginLeft: 20 }}>Post History</h2>
+
                                 {feedView(history)}
                             </div>
-
                             :
-                            <div></div>
+                            historyDone ?
+                                <h3 style={{ paddingTop: 15 }}>No posts.</h3>
+                                :
+                                <div style={{ marginTop: 15 }}>
+                                    <Spinner animation="border" />
+                                </div>
+
                         }
 
                     </Container>
