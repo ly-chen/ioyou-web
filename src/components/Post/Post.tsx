@@ -33,7 +33,7 @@ const PostPage: React.FC = () => {
             }
             getUser()
         }
-    }, [session, firebase])
+    })
 
     const handleChannelChange = (event: any) => {
         setInput(event.target.value)
@@ -141,10 +141,7 @@ const PostPage: React.FC = () => {
                     }} style={{ marginRight: 10 }}>
                         Profile
                     </Button>
-                    <Button variant="light" onClick={() => {
-                        window.location.reload()
-                        firebase.doSignOut()
-                    }}>
+                    <Button variant="light" onClick={() => { firebase.doSignOut() }}>
                         sign out
                     </Button>
                 </Nav>
