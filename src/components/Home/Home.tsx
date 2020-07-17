@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { useFirebase, Firebase } from '../Firebase'
 import { functions, auth, firestore } from 'firebase'
-import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card, Tabs, Tab } from 'react-bootstrap'
+import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card, Tabs, Tab, DropdownButton, Dropdown, } from 'react-bootstrap'
 import { useSession } from '../Session'
 import styles from './Home.module.css'
 
@@ -28,6 +28,11 @@ const HomePage: React.FC = () => {
     const [lastHome, setLastHome] = useState<any>(null);
     const [lastAcad, setLastAcad] = useState<any>(null);
     const [lastBul, setLastBul] = useState<any>(null);
+
+    const [allSort, setAllSort] = useState<string>('timestamp.seconds')
+    const [homeSort, setHomeSort] = useState<string>('timestamp.seconds')
+    const [acadSort, setAcadSort] = useState<string>('timestamp.seconds')
+    const [bulSort, setBulSort] = useState<string>('timestamp.seconds')
 
     const [upvoted, setUpvoted] = useState<string[]>([])
     const [downvoted, setDownvoted] = useState<string[]>([])
@@ -58,19 +63,38 @@ const HomePage: React.FC = () => {
         }
     }
 
-    const getPosts = async (sort: string, category: string, lastCategory: any, setLastCategory: any, setCategoryFeed: any, setLoading: any, subjects: string[] | undefined) => {
+    const getPosts = async (sort: string, timeframe: string, category: string, lastCategory: any, setLastCategory: any, setCategoryFeed: any, setLoading: any, subjects: string[] | undefined, update: boolean) => {
+        console.log('lastCategory START = ', lastCategory)
         try {
             var docList: any[] = []
-            var query = firebase.db.collection('posts').orderBy(sort, "desc")
+            var query = firebase.db.collection('posts').orderBy('timestamp.seconds', 'desc')
+            if (timeframe === 'today') {
+                query = query.where('timestamp.seconds', '>=', nowSeconds - 86400)
+            } if (timeframe === 'week') {
+                query = query.where('timestamp.seconds', '>=', (nowSeconds - 604800))
+            } if (timeframe === 'month') {
+                query = query.where('timestamp.seconds', '>=', (nowSeconds - 2629745))
+            } if (timeframe === 'year') {
+                query = query.where('timestamp.seconds', '>=', (nowSeconds - 31556926))
+            }
 
             let posts = null;
             console.log('subjects =', subjects)
             if (category === 'all') {
                 if (lastCategory) {
-                    const lastTime = lastCategory.data().timestamp.seconds
+                    console.log('lastCategory = ', lastCategory)
+                    var lastTime;
+                    if (sort = 'upvotes') {
+                        lastTime = lastCategory.data().upvotes
+                    } else {
+                        lastTime = lastCategory.data().timestamp.seconds
+                    }
+
+                    console.log('lastTime = ', lastTime)
                     posts = await query.startAfter(lastTime).limit(10).get()
                 } else {
                     posts = await query.limit(10).get()
+                    console.log('tHIS POSTS = ', posts.size)
                 }
 
 
@@ -81,6 +105,7 @@ const HomePage: React.FC = () => {
                     return
                 } else {
                     if (lastCategory) {
+                        console.log('lastCategory 2 = ', lastCategory)
                         const lastTime = lastCategory.data().timestamp.seconds
                         posts = await query.startAfter(lastTime).where('channels', 'array-contains-any', subjects).limit(10).get()
                     } else {
@@ -97,6 +122,7 @@ const HomePage: React.FC = () => {
                 return;
             } else {
                 console.log('posts = ', posts)
+                console.log('this is triggered')
                 const lastPost = posts.docs[posts.docs.length - 1]
                 setLastCategory(lastPost)
             }
@@ -113,19 +139,35 @@ const HomePage: React.FC = () => {
             }
 
             if (category === 'all') {
-                setAllFeed([...allFeed, ...docList])
+                if (update) {
+                    setAllFeed([...docList])
+                } else {
+                    setAllFeed([...allFeed, ...docList])
+                }
                 setAllLoadingDone(true)
             }
             if (category === 'home') {
-                setHomeFeed([...homeFeed, ...docList])
+                if (update) {
+                    setHomeFeed([...docList])
+                } else {
+                    setHomeFeed([...allFeed, ...docList])
+                }
                 setHomeLoadingDone(true)
             }
             if (category === 'academic') {
-                setAcademic([...academic, ...docList])
+                if (update) {
+                    setAcademic([...docList])
+                } else {
+                    setAcademic([...allFeed, ...docList])
+                }
                 setAcadLoadingDone(true)
             }
             if (category === 'bulletin') {
-                setBulletin([...bulletin, ...docList])
+                if (update) {
+                    setBulletin([...docList])
+                } else {
+                    setBulletin([...allFeed, ...docList])
+                }
                 setBulLoadingDone(true)
             }
         } catch (e) {
@@ -141,10 +183,10 @@ const HomePage: React.FC = () => {
 
         setChannels(subjects)
 
-        getPosts('timestamp.seconds', 'all', lastAll, setLastAll, setAllFeed, setAllLoadingDone, subjects)
-        getPosts('timestamp.seconds', 'home', lastHome, setLastHome, setHomeFeed, setHomeLoadingDone, subjects)
-        getPosts('timestamp.seconds', 'academic', lastAcad, setLastAcad, setAcademic, setAcadLoadingDone, subjects)
-        getPosts('timestamp.seconds', 'bulletin', lastBul, setLastBul, setBulletin, setBulLoadingDone, subjects)
+        getPosts('timestamp.seconds', 'timestamp.seconds', 'all', lastAll, setLastAll, setAllFeed, setAllLoadingDone, subjects, false)
+        getPosts('timestamp.seconds', 'timestamp.seconds', 'home', lastHome, setLastHome, setHomeFeed, setHomeLoadingDone, subjects, false)
+        getPosts('timestamp.seconds', 'timestamp.seconds', 'academic', lastAcad, setLastAcad, setAcademic, setAcadLoadingDone, subjects, false)
+        getPosts('timestamp.seconds', 'timestamp.seconds', 'bulletin', lastBul, setLastBul, setBulletin, setBulLoadingDone, subjects, false)
 
         console.log('subjects = ', subjects)
     }
@@ -380,6 +422,87 @@ const HomePage: React.FC = () => {
         return feedItems
     }
 
+    const sortButton = (category: string, feedSort: string, setLastFeed: any, setCategoryFeed: any, setFeedLoading: any, setFeedSort: any) => {
+        const handleSort = async (sortType: string, timeframe: string) => {
+            setLastFeed(null)
+            setCategoryFeed([])
+            setFeedLoading(false)
+            await getPosts(sortType, timeframe, category, null, setLastFeed, setCategoryFeed, setFeedLoading, channels, true)
+            await setFeedSort(timeframe)
+        }
+
+        return (
+            <DropdownButton id="sort" title='Sort by' variant='light' style={{ paddingTop: 15 }}>
+                <Dropdown.Item active={feedSort == 'timestamp.seconds'}
+                    onClick={async () => {
+                        if (feedSort == 'timestamp.seconds') {
+                            return
+                        } else {
+                            handleSort('timestamp.seconds', 'timestamp.seconds')
+                        }
+                    }}
+                >
+                    Most Recent
+                                        </Dropdown.Item>
+                <Dropdown.Item active={feedSort == 'today'}
+                    onClick={async () => {
+                        if (feedSort == 'today') {
+                            return
+                        } else {
+                            handleSort('upvotes', 'today')
+                        }
+                    }}
+                >
+                    Top of Today
+                                        </Dropdown.Item>
+                <Dropdown.Item active={feedSort == 'week'}
+                    onClick={() => {
+                        if (feedSort == 'week') {
+                            return
+                        } else {
+                            handleSort('upvotes', 'week')
+                        }
+                    }}
+                >
+                    Top of This Week
+                                        </Dropdown.Item>
+                <Dropdown.Item active={feedSort == 'month'}
+                    onClick={() => {
+                        if (feedSort == 'month') {
+                            return
+                        } else {
+                            handleSort('upvotes', 'month')
+                        }
+                    }}
+                >
+                    Top of This Month
+                                        </Dropdown.Item>
+                <Dropdown.Item active={feedSort == 'year'}
+                    onClick={() => {
+                        if (feedSort == 'year') {
+                            return
+                        } else {
+                            handleSort('upvotes', 'year')
+                        }
+                    }}
+                >
+                    Top of This Year
+                                        </Dropdown.Item>
+                <Dropdown.Item active={feedSort == 'allTime'}
+                    onClick={() => {
+                        if (feedSort == 'allTime') {
+                            return
+                        } else {
+                            handleSort('upvotes', 'allTime')
+                        }
+                    }}
+                >
+                    Top of All Time
+                                        </Dropdown.Item>
+            </DropdownButton>
+        )
+    }
+
     return (
         <div>
             <Navbar bg="light" variant="light">
@@ -431,18 +554,20 @@ const HomePage: React.FC = () => {
                 </Row>
                 <Tabs defaultActiveKey={session.auth ? 'Home' : 'All'} id="feed-nav">
                     <Tab eventKey="All" title="All">
+                        {sortButton('all', allSort, setLastAll, setAllFeed, setAllLoadingDone, setAllSort)}
                         {
+
                             allFeed[0] ?
                                 <div>
                                     {feedView(allFeed)}
-                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'all', lastAll, setLastAll, setAllFeed, setAllLoadingDone, channels) }}>Load more</Button>
+                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'timestamp.seconds', 'all', lastAll, setLastAll, setAllFeed, setAllLoadingDone, [], false) }}>Load more</Button>
                                 </div>
 
                                 :
                                 allLoadingDone ?
                                     <Card style={{ marginTop: 15 }}>
                                         <Card.Body>
-                                            <Card.Text>We're encounter errors. Try again later?</Card.Text>
+                                            <Card.Text>No new posts.</Card.Text>
                                         </Card.Body>
                                     </Card>
                                     :
@@ -451,11 +576,12 @@ const HomePage: React.FC = () => {
 
                     </Tab>
                     <Tab eventKey="Home" title="Home">
+                        {sortButton('home', homeSort, setLastHome, setHomeFeed, setHomeLoadingDone, setHomeSort)}
                         {
                             homeFeed[0] ?
                                 <div>
                                     {feedView(homeFeed)}
-                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'home', lastHome, setLastHome, setHomeFeed, setHomeLoadingDone, channels) }}>Load more</Button>
+                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'timestamp.seconds', 'home', lastHome, setLastHome, setHomeFeed, setHomeLoadingDone, channels, false) }}>Load more</Button>
                                 </div>
 
                                 :
@@ -463,7 +589,7 @@ const HomePage: React.FC = () => {
                                     session.auth ?
                                         <Card style={{ marginTop: 15 }}>
                                             <Card.Body>
-                                                <Card.Text>Subscribe to channels in your Profile page.</Card.Text>
+                                                <Card.Text>No new posts. Subscribe to more channels in your Profile page!</Card.Text>
                                             </Card.Body>
                                         </Card>
                                         :
@@ -478,11 +604,12 @@ const HomePage: React.FC = () => {
 
                     </Tab>
                     <Tab eventKey="Academic" title="Academic">
+                        {sortButton('academic', acadSort, setLastAcad, setAcademic, setAcadLoadingDone, setAcadSort)}
                         {
                             academic[0] ?
                                 <div>
                                     {feedView(academic)}
-                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'academic', lastAcad, setLastAcad, setAcademic, setAcadLoadingDone, channels) }}>Load more</Button>
+                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'timestamp.seconds', 'academic', lastAcad, setLastAcad, setAcademic, setAcadLoadingDone, channels, false) }}>Load more</Button>
                                 </div>
 
                                 :
@@ -505,11 +632,12 @@ const HomePage: React.FC = () => {
 
                     </Tab>
                     <Tab eventKey="Bulletin" title="Bulletin">
+                        {sortButton('bulletin', bulSort, setLastBul, setBulletin, setBulLoadingDone, setBulSort)}
                         {
                             bulletin[0] ?
                                 <div>
                                     {feedView(bulletin)}
-                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'bulletin', lastBul, setLastBul, setBulletin, setBulLoadingDone, channels) }}>Load more</Button>
+                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'timestamp.seconds', 'bulletin', lastBul, setLastBul, setBulletin, setBulLoadingDone, channels, false) }}>Load more</Button>
                                 </div>
 
                                 :
