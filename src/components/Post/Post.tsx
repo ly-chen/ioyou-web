@@ -23,8 +23,6 @@ const PostPage: React.FC = () => {
 
     const [name, setName] = useState<string>("")
 
-    const [selectBul, setSelectBul] = useState<boolean>(false)
-
     useEffect(() => {
         if (!session.auth) {
             window.location.href = "/"
@@ -118,16 +116,11 @@ const PostPage: React.FC = () => {
         console.log(title)
         console.log(description)
         let newPost = null;
-        if (selectBul) {
-            newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: [], authorName: name, bulletin: selectBul, upvotes: 0 }
+        if (channels.length == 0) {
+            newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: ['General'], authorName: name }
         } else {
-            if (channels.length == 0) {
-                newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: ['General'], authorName: name, bulletin: false, upvotes: 0 }
-            } else {
-                newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: channels, authorName: name, upvotes: 0, bulletin: false }
-            }
+            newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: channels, authorName: name }
         }
-
         await functions().httpsCallable('createPost')(newPost)
         window.location.href = "/"
     }
@@ -148,11 +141,8 @@ const PostPage: React.FC = () => {
                     }} style={{ marginRight: 10 }}>
                         Profile
                     </Button>
-                    <Button variant="light" onClick={() => {
-                        window.location.reload()
-                        firebase.doSignOut()
-                    }}>
-                        Sign Out
+                    <Button variant="light" onClick={() => { firebase.doSignOut() }}>
+                        sign out
                     </Button>
                 </Nav>
             </Navbar>
@@ -160,31 +150,22 @@ const PostPage: React.FC = () => {
                 <div>
                     <h1 style={{ paddingBottom: 15 }}>Create a new post</h1>
                     <Form onSubmit={handleSubmit}>
-                        <ButtonGroup style={{ paddingBottom: 15 }}>
-                            <Button variant='outline-primary' active={!selectBul} onClick={() => { setSelectBul(false) }}>Academic</Button>
-                            <Button variant='outline-primary' active={selectBul} onClick={() => {
-                                setSelectBul(true)
-                            }}>Bulletin</Button>
-                        </ButtonGroup>
-                        {selectBul ?
-                            <div></div>
-                            :
-                            <Form.Group controlId="channels">
-                                <Form.Label>Channels</Form.Label>
-                                <Row style={{ marginLeft: 10 }}>
-                                    {selectedView()}
-                                    {subjectsView()}
-                                </Row>
-                                <Form.Control type="text" placeholder="What subjects?" onChange={handleChannelChange} value={input} />
-                                <Form.Text className="text-danger">
-                                    {err}
-                                </Form.Text>
-                            </Form.Group>
-                        }
+                        <Form.Group controlId="channels">
+                            <Form.Label>Channels</Form.Label>
+                            <Row style={{ marginLeft: 10 }}>
+                                {selectedView()}
+                                {subjectsView()}
+                            </Row>
+
+                            <Form.Control type="text" placeholder="What subjects?" onChange={handleChannelChange} value={input} />
+                            <Form.Text className="text-danger">
+                                {err}
+                            </Form.Text>
+                        </Form.Group>
 
                         <Form.Group controlId="title">
                             <Form.Label>Title</Form.Label>
-                            <Form.Control required type="text" placeholder="What's up?" onChange={handleTitleChange} />
+                            <Form.Control required type="text" placeholder="What question?" onChange={handleTitleChange} />
                         </Form.Group>
 
                         <Form.Group controlId="description">

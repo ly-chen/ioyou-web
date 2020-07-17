@@ -1,5 +1,5 @@
 .paddingTop {
-    padding-top: 4rem;
+    padding-top: 5rem;
     padding-bottom: 5rem;
 }
 
@@ -19,12 +19,4 @@
 
 .refresh {
     padding-left: 1rem;
-}
-
-.borderLeft {
-    border-left: solid lightgray;
-    border-left-width: 0.5px;
-    border-top: solid lightgray;
-    border-top-width: 0.5px;
-    border-top-left-radius: 3pt;
 }
