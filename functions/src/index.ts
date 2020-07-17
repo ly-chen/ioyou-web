@@ -12,7 +12,3 @@ admin.initializeApp();
 exports.createPost = functions.https.onCall(async (data, context) => {
     await admin.firestore().collection('posts').doc().set(data);
 })
-
-exports.createComment = functions.https.onCall(async (data, context) => {
-    await admin.firestore().collection('comments').doc().set(data);
-})

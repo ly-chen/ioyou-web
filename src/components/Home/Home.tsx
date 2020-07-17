@@ -9,11 +9,11 @@ const HomePage: React.FC = () => {
     const firebase = useFirebase()
     const session = useSession()
 
-    const [allFeed, setAllFeed] = useState<any[]>([])
-    const [homeFeed, setHomeFeed] = useState<any[]>([])
-    const [academic, setAcademic] = useState<any[]>([])
-    const [bulletin, setBulletin] = useState<any[]>([])
-    const [channels, setChannels] = useState<string[] | undefined>(undefined)
+    const [allFeed, setAllFeed] = useState<any>(null)
+    const [homeFeed, setHomeFeed] = useState<any>(null)
+    const [academic, setAcademic] = useState<any>(null)
+    const [bulletin, setBulletin] = useState<any>(null)
+    const [channels, setChannels] = useState<Array<string>>([])
 
     const [userDoc, setUserDoc] = useState<any>(null)
 
@@ -61,7 +61,7 @@ const HomePage: React.FC = () => {
         } catch (e) {
             console.log(e)
         }
-    }
+
 
     const getPosts = async (sort: string, category: string, categoryFeed: any[], lastCategory: any, setLastCategory: any, setCategoryFeed: any, setLoading: any, subjects: string[] | undefined, update: boolean) => {
         console.log('lastCategory START = ', lastCategory)
@@ -110,8 +110,9 @@ const HomePage: React.FC = () => {
                         posts = await query.where('channels', 'array-contains-any', subjects).limit(10).get()
                     }
                 }
-            }
-
+                posts.forEach(doc => {
+                    docList = [...docList, { id: doc.id, data: doc.data() }];
+                });
 
             if (posts?.empty || posts == null) {
                 console.log('No matching documents')
@@ -146,12 +147,14 @@ const HomePage: React.FC = () => {
         } catch (e) {
             console.log(e)
         }
-    }
 
-    const loadPosts = async () => {
-        let subjects: string[] | undefined = []
-        if (session.auth) {
-            subjects = await getChannels()
+        const loadPosts = async () => {
+            const subjects = await getChannels()
+            console.log('subjects = ', subjects)
+            getPosts('timestamp.seconds', 'all', subjects)
+            getPosts('timestamp.seconds', 'home', subjects)
+            getPosts('timestamp.seconds', 'academic', subjects)
+            getPosts('timestamp.seconds', 'bulletin', subjects)
         }
 
         setChannels(subjects)
@@ -482,7 +485,7 @@ const HomePage: React.FC = () => {
 
                     </Col>
                 </Row>
-                <Tabs defaultActiveKey={session.auth ? 'Home' : 'All'} id="feed-nav">
+                <Tabs defaultActiveKey="Home" id="feed-nav">
                     <Tab eventKey="All" title="All">
                         {sortButton('all', allFeed, allSort, setLastAll, setAllFeed, setAllLoadingDone, setAllSort)}
                         {
@@ -503,7 +506,6 @@ const HomePage: React.FC = () => {
                                     :
                                     feedLoadingView()
                         }
-
                     </Tab>
                     <Tab eventKey="Home" title="Home">
                         {sortButton('home', homeFeed, homeSort, setLastHome, setHomeFeed, setHomeLoadingDone, setHomeSort)}
@@ -531,7 +533,6 @@ const HomePage: React.FC = () => {
                                     :
                                     feedLoadingView()
                         }
-
                     </Tab>
                     <Tab eventKey="Academic" title="Academic">
                         {sortButton('academic', academic, acadSort, setLastAcad, setAcademic, setAcadLoadingDone, setAcadSort)}
@@ -543,23 +544,8 @@ const HomePage: React.FC = () => {
                                 </div>
 
                                 :
-                                acadLoadingDone ?
-                                    session.auth ?
-                                        <Card style={{ marginTop: 15 }}>
-                                            <Card.Body>
-                                                <Card.Text>Subscribe to channels in your Profile page.</Card.Text>
-                                            </Card.Body>
-                                        </Card>
-                                        :
-                                        <Card style={{ marginTop: 15 }}>
-                                            <Card.Body>
-                                                <Card.Text>Create an account to subscribe to specific channels.</Card.Text>
-                                            </Card.Body>
-                                        </Card>
-                                    :
-                                    feedLoadingView()
+                                feedLoadingView()
                         }
-
                     </Tab>
                     <Tab eventKey="Bulletin" title="Bulletin">
                         {sortButton('bulletin', bulletin, bulSort, setLastBul, setBulletin, setBulLoadingDone, setBulSort)}
@@ -580,7 +566,6 @@ const HomePage: React.FC = () => {
                                     :
                                     feedLoadingView()
                         }
-
                     </Tab>
                 </Tabs>
             </Container>

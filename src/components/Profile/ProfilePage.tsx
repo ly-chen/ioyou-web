@@ -129,10 +129,6 @@ const ProfilePage: React.FC = () => {
     }
 
     useEffect(() => {
-        var now = new Date();
-        var seconds = ((now.getTime()) * .001) >> 0;
-        setNowSeconds(seconds);
-
         const getUser = async () => {
             const results = await firestore().collection('users').where('username', '==', username).limit(1).get();
             if (results.empty) {
@@ -159,7 +155,6 @@ const ProfilePage: React.FC = () => {
                         setSS(true)
                     }
                 }
-
 
                 getPosts('timestamp.seconds', userID, lastPost, history);
                 setUserLoading(false);
@@ -198,6 +193,7 @@ const ProfilePage: React.FC = () => {
                 :
                 <div key={keyName}></div>
 
+            </div>
         )
 
         return (
@@ -221,6 +217,7 @@ const ProfilePage: React.FC = () => {
 
     const editSubjectsView = () => {
 
+        var bus = actives['Business']
         return (
             <Row style={{ paddingTop: 15, paddingLeft: 15 }}>
                 <Button active={actives['Arts']} variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}
@@ -676,7 +673,7 @@ const ProfilePage: React.FC = () => {
                         {history
                             ?
                             <div>
-
+                                <h2 style={{ marginTop: 40, marginLeft: 20 }}>Post History</h2>
                                 {feedView(history)}
                                 <Button variant='light' onClick={() => { getPosts(sort, userid, lastPost, history) }}>Load more</Button>
                             </div>
@@ -688,6 +685,8 @@ const ProfilePage: React.FC = () => {
                                     <Spinner style={{ marginTop: 30, marginLeft: 30 }} animation="border" />
                                 </div>
 
+                            :
+                            <div></div>
                         }
 
                     </Container>

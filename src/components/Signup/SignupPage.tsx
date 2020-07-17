@@ -21,13 +21,6 @@ const SignupPage: React.FC = () => {
 
     const [handling, setHandling] = useState<boolean>(false);
 
-
-    useEffect(() => {
-        if (session.auth && (handling == false)) {
-            window.location.href = "/"
-        }
-    }, [session, firebase])
-
     const handleSubmit = async (event: any) => {
         event.preventDefault();
         setHandling(true)

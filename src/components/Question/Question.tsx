@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom';
 import { useFirebase, Firebase } from '../Firebase'
 import { functions, auth, firestore } from 'firebase'
 import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card, Form } from 'react-bootstrap'
 import { useSession } from '../Session'
 import styles from './Question.module.css'
 
-const QuestionPage: React.FC = (props) => {
+const QuestionPage: React.FC = () => {
     const firebase = useFirebase()
     const session = useSession()
 
@@ -162,6 +161,7 @@ const QuestionPage: React.FC = (props) => {
             const allComments = await firebase.db.collection('comments').where('thread', '==', postid).get()
             setNumComments(allComments.size)
         }
+    })
 
         setAllComments()
 
@@ -389,7 +389,6 @@ const QuestionPage: React.FC = (props) => {
         )
     }
 
-    //console.log("Object.values(item) = ", Object.values(comments))
 
     return (
         <div>
@@ -399,14 +398,12 @@ const QuestionPage: React.FC = (props) => {
                             ioyou
                     </Navbar.Brand>
                 <Nav className="ml-auto">
-                    {session.auth ?
-                        <div>
-                            <Button variant="light" onClick={async () => {
-                                const user = await firebase.db.collection('users').doc(session?.auth?.uid).get()
-                                const username = user?.data()?.username
-                                window.location.href = `/user/${username}`
-                            }} style={{ marginRight: 10 }}>
-                                Profile
+                    <Button variant="light" onClick={async () => {
+                        const user = await firebase.db.collection('users').doc(session?.auth?.uid).get()
+                        const username = user?.data()?.username
+                        window.location.href = `/user/${username}`
+                    }} style={{ marginRight: 10 }}>
+                        Profile
                             </Button>
                             <Button variant="outline-dark" onClick={() => {
                                 window.location.reload()
