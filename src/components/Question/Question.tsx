@@ -412,7 +412,7 @@ const QuestionPage: React.FC = (props) => {
                                 window.location.reload()
                                 firebase.doSignOut()
                             }}>
-                                sign out
+                                Sign Out
                             </Button>
                         </div>
 
@@ -451,7 +451,7 @@ const QuestionPage: React.FC = (props) => {
                                         0
                                     }
                                     </p>
-                                    <Button disabled={!session.auth} active={downvoted.includes(postid)} size="sm" variant="outline-primary" onClick={() => {
+                                    <Button disabled={!session.auth} active={downvoted.includes(postid)} size="sm" variant="outline-danger" onClick={() => {
                                         handleVote(false, post)
                                         setChanged(!changed)
                                     }}>▼</Button>

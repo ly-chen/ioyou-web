@@ -152,7 +152,7 @@ const PostPage: React.FC = () => {
                         window.location.reload()
                         firebase.doSignOut()
                     }}>
-                        sign out
+                        Sign Out
                     </Button>
                 </Nav>
             </Navbar>
