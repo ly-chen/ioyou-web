@@ -123,7 +123,10 @@ const ProfilePage: React.FC = () => {
             // use keyName to get current key's name
             // and a[keyName] to get its value
             actives[keyName] ?
-                <Button key={keyName} active variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>{keyName}</Button>
+                keyName == 'bulletin' ?
+                    <div key={keyName}></div>
+                    :
+                    <Button key={keyName} active variant='outline-dark' style={{ marginRight: 15, marginBottom: 15 }}>{keyName}</Button>
                 :
                 <div key={keyName}></div>
 

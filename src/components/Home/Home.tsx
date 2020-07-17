@@ -63,7 +63,7 @@ const HomePage: React.FC = () => {
         }
     }
 
-    const getPosts = async (sort: string, timeframe: string, category: string, lastCategory: any, setLastCategory: any, setCategoryFeed: any, setLoading: any, subjects: string[] | undefined, update: boolean) => {
+    const getPosts = async (sort: string, timeframe: string, category: string, categoryFeed: any[], lastCategory: any, setLastCategory: any, setCategoryFeed: any, setLoading: any, subjects: string[] | undefined, update: boolean) => {
         console.log('lastCategory START = ', lastCategory)
         try {
             var docList: any[] = []
@@ -99,19 +99,28 @@ const HomePage: React.FC = () => {
 
 
             } else {
-                if (subjects == undefined || subjects?.length == 0) {
-                    posts = null
-                    setLoading(true)
-                    return
-                } else {
-                    if (lastCategory) {
-                        console.log('lastCategory 2 = ', lastCategory)
-                        const lastTime = lastCategory.data().timestamp.seconds
+                if (category == 'academic') {
+                    if (subjects == undefined || subjects?.length == 0) {
+                        posts = null
+                        setLoading(true)
+                        return
+                    }
+                    query = query.where('bulletin', '==', false)
+                }
+                if (lastCategory) {
+                    console.log('lastCategory 2 = ', lastCategory)
+                    const lastTime = lastCategory.data().timestamp.seconds
+                    if (category == 'bulletin') {
+                        posts = await query.startAfter(lastTime).where('bulletin', '==', true).limit(10).get()
+                    } else {
                         posts = await query.startAfter(lastTime).where('channels', 'array-contains-any', subjects).limit(10).get()
+                    }
+                } else {
+                    if (category == 'bulletin') {
+                        posts = await query.where('bulletin', '==', true).limit(10).get()
                     } else {
                         posts = await query.where('channels', 'array-contains-any', subjects).limit(10).get()
                     }
-
                 }
             }
 
@@ -120,16 +129,27 @@ const HomePage: React.FC = () => {
                 console.log('No matching documents')
                 setLoading(true)
                 return;
-            } else {
-                console.log('posts = ', posts)
-                console.log('this is triggered')
-                const lastPost = posts.docs[posts.docs.length - 1]
-                setLastCategory(lastPost)
             }
 
-            posts.forEach(doc => {
+
+            posts?.forEach(doc => {
                 docList = [...docList, { id: doc.id, data: doc.data() }];
             });
+
+            if (timeframe != 'timestamp.seconds') {
+                docList.sort((a, b) => {
+                    if (a.data.upvotes > b.data.upvotes) {
+                        return -1
+                    }
+                    if (a.data.upvotes < b.data.upvotes) {
+                        return 1
+                    }
+                    return 0
+                })
+            }
+
+            const lastPost = docList[docList.length - 1]
+            setLastCategory(lastPost)
 
 
             for (let i = 0; i < docList.length; i++) {
@@ -138,38 +158,15 @@ const HomePage: React.FC = () => {
                 docList[i] = { id: doc.id, data: doc.data, numComments: numComments.size }
             }
 
-            if (category === 'all') {
-                if (update) {
-                    setAllFeed([...docList])
-                } else {
-                    setAllFeed([...allFeed, ...docList])
-                }
-                setAllLoadingDone(true)
+            if (update) {
+                setCategoryFeed([...docList])
+
+            } else {
+                setCategoryFeed([...categoryFeed, ...docList])
             }
-            if (category === 'home') {
-                if (update) {
-                    setHomeFeed([...docList])
-                } else {
-                    setHomeFeed([...allFeed, ...docList])
-                }
-                setHomeLoadingDone(true)
-            }
-            if (category === 'academic') {
-                if (update) {
-                    setAcademic([...docList])
-                } else {
-                    setAcademic([...allFeed, ...docList])
-                }
-                setAcadLoadingDone(true)
-            }
-            if (category === 'bulletin') {
-                if (update) {
-                    setBulletin([...docList])
-                } else {
-                    setBulletin([...allFeed, ...docList])
-                }
-                setBulLoadingDone(true)
-            }
+            setLoading(true)
+
+
         } catch (e) {
             console.log(e)
         }
@@ -183,10 +180,10 @@ const HomePage: React.FC = () => {
 
         setChannels(subjects)
 
-        getPosts('timestamp.seconds', 'timestamp.seconds', 'all', lastAll, setLastAll, setAllFeed, setAllLoadingDone, subjects, false)
-        getPosts('timestamp.seconds', 'timestamp.seconds', 'home', lastHome, setLastHome, setHomeFeed, setHomeLoadingDone, subjects, false)
-        getPosts('timestamp.seconds', 'timestamp.seconds', 'academic', lastAcad, setLastAcad, setAcademic, setAcadLoadingDone, subjects, false)
-        getPosts('timestamp.seconds', 'timestamp.seconds', 'bulletin', lastBul, setLastBul, setBulletin, setBulLoadingDone, subjects, false)
+        getPosts('timestamp.seconds', 'timestamp.seconds', 'all', allFeed, lastAll, setLastAll, setAllFeed, setAllLoadingDone, subjects, false)
+        getPosts('timestamp.seconds', 'timestamp.seconds', 'home', homeFeed, lastHome, setLastHome, setHomeFeed, setHomeLoadingDone, subjects, false)
+        getPosts('timestamp.seconds', 'timestamp.seconds', 'academic', academic, lastAcad, setLastAcad, setAcademic, setAcadLoadingDone, subjects, false)
+        getPosts('timestamp.seconds', 'timestamp.seconds', 'bulletin', bulletin, lastBul, setLastBul, setBulletin, setBulLoadingDone, subjects, false)
 
         console.log('subjects = ', subjects)
     }
@@ -336,7 +333,7 @@ const HomePage: React.FC = () => {
 
                         </Col>
                         <Col xs={3} sm={2} style={{ textAlign: 'center' }}>
-                            <Button size="sm" active={upvoted.includes(object.id)} variant="outline-dark" onClick={() => {
+                            <Button disabled={!session.auth} size="sm" active={upvoted.includes(object.id)} variant="outline-primary" onClick={() => {
                                 handleVote(true)
                                 setChanged(!changed)
                             }}>
@@ -348,7 +345,7 @@ const HomePage: React.FC = () => {
                                 0
                             }
                             </p>
-                            <Button size="sm" active={downvoted.includes(object.id)} variant="outline-dark" onClick={() => {
+                            <Button disabled={!session.auth} size="sm" active={downvoted.includes(object.id)} variant="outline-primary" onClick={() => {
                                 handleVote(false)
                                 setChanged(!changed)
                             }}>▼</Button>
@@ -422,17 +419,17 @@ const HomePage: React.FC = () => {
         return feedItems
     }
 
-    const sortButton = (category: string, feedSort: string, setLastFeed: any, setCategoryFeed: any, setFeedLoading: any, setFeedSort: any) => {
+    const sortButton = (category: string, categoryFeed: any[], feedSort: string, setLastFeed: any, setCategoryFeed: any, setFeedLoading: any, setFeedSort: any) => {
         const handleSort = async (sortType: string, timeframe: string) => {
             setLastFeed(null)
             setCategoryFeed([])
             setFeedLoading(false)
-            await getPosts(sortType, timeframe, category, null, setLastFeed, setCategoryFeed, setFeedLoading, channels, true)
+            await getPosts(sortType, timeframe, category, categoryFeed, null, setLastFeed, setCategoryFeed, setFeedLoading, channels, true)
             await setFeedSort(timeframe)
         }
 
         return (
-            <DropdownButton id="sort" title='Sort by' variant='light' style={{ paddingTop: 15 }}>
+            <DropdownButton id="sort" title='Sort' variant='light' style={{ paddingTop: 15 }}>
                 <Dropdown.Item active={feedSort == 'timestamp.seconds'}
                     onClick={async () => {
                         if (feedSort == 'timestamp.seconds') {
@@ -554,13 +551,13 @@ const HomePage: React.FC = () => {
                 </Row>
                 <Tabs defaultActiveKey={session.auth ? 'Home' : 'All'} id="feed-nav">
                     <Tab eventKey="All" title="All">
-                        {sortButton('all', allSort, setLastAll, setAllFeed, setAllLoadingDone, setAllSort)}
+                        {sortButton('all', allFeed, allSort, setLastAll, setAllFeed, setAllLoadingDone, setAllSort)}
                         {
 
                             allFeed[0] ?
                                 <div>
                                     {feedView(allFeed)}
-                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'timestamp.seconds', 'all', lastAll, setLastAll, setAllFeed, setAllLoadingDone, [], false) }}>Load more</Button>
+                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'timestamp.seconds', 'all', allFeed, lastAll, setLastAll, setAllFeed, setAllLoadingDone, [], false) }}>Load more</Button>
                                 </div>
 
                                 :
@@ -576,12 +573,12 @@ const HomePage: React.FC = () => {
 
                     </Tab>
                     <Tab eventKey="Home" title="Home">
-                        {sortButton('home', homeSort, setLastHome, setHomeFeed, setHomeLoadingDone, setHomeSort)}
+                        {sortButton('home', homeFeed, homeSort, setLastHome, setHomeFeed, setHomeLoadingDone, setHomeSort)}
                         {
                             homeFeed[0] ?
                                 <div>
                                     {feedView(homeFeed)}
-                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'timestamp.seconds', 'home', lastHome, setLastHome, setHomeFeed, setHomeLoadingDone, channels, false) }}>Load more</Button>
+                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'timestamp.seconds', 'home', homeFeed, lastHome, setLastHome, setHomeFeed, setHomeLoadingDone, channels, false) }}>Load more</Button>
                                 </div>
 
                                 :
@@ -604,12 +601,12 @@ const HomePage: React.FC = () => {
 
                     </Tab>
                     <Tab eventKey="Academic" title="Academic">
-                        {sortButton('academic', acadSort, setLastAcad, setAcademic, setAcadLoadingDone, setAcadSort)}
+                        {sortButton('academic', academic, acadSort, setLastAcad, setAcademic, setAcadLoadingDone, setAcadSort)}
                         {
                             academic[0] ?
                                 <div>
                                     {feedView(academic)}
-                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'timestamp.seconds', 'academic', lastAcad, setLastAcad, setAcademic, setAcadLoadingDone, channels, false) }}>Load more</Button>
+                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'timestamp.seconds', 'academic', academic, lastAcad, setLastAcad, setAcademic, setAcadLoadingDone, channels, false) }}>Load more</Button>
                                 </div>
 
                                 :
@@ -632,19 +629,19 @@ const HomePage: React.FC = () => {
 
                     </Tab>
                     <Tab eventKey="Bulletin" title="Bulletin">
-                        {sortButton('bulletin', bulSort, setLastBul, setBulletin, setBulLoadingDone, setBulSort)}
+                        {sortButton('bulletin', bulletin, bulSort, setLastBul, setBulletin, setBulLoadingDone, setBulSort)}
                         {
                             bulletin[0] ?
                                 <div>
                                     {feedView(bulletin)}
-                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'timestamp.seconds', 'bulletin', lastBul, setLastBul, setBulletin, setBulLoadingDone, channels, false) }}>Load more</Button>
+                                    <Button variant='light' onClick={() => { getPosts('timestamp.seconds', 'timestamp.seconds', 'bulletin', bulletin, lastBul, setLastBul, setBulletin, setBulLoadingDone, channels, false) }}>Load more</Button>
                                 </div>
 
                                 :
                                 bulLoadingDone ?
                                     <Card style={{ marginTop: 15 }}>
                                         <Card.Body>
-                                            <Card.Text>We're encounter errors. Try again later?</Card.Text>
+                                            <Card.Text>No new posts.</Card.Text>
                                         </Card.Body>
                                     </Card>
                                     :

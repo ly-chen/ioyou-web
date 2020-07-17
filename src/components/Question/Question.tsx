@@ -304,20 +304,22 @@ const QuestionPage: React.FC = (props) => {
 
 
                 <p className={styles.fontLess}>
-                    <Button active={upvoted.includes(object.id)} size="sm" variant="outline-dark" onClick={() => {
+                    <Button disabled={!session.auth} active={upvoted.includes(object.id)} size="sm" variant="outline-dark" onClick={() => {
                         handleVote(true, object)
                         setChanged(!changed)
                     }}>
                         ▲
                     </Button>
                     {' '}
+                    &nbsp;
                     {object?.data?.upvotes ?
                         object.data.upvotes
                         :
                         0
                     }
                     {' '}
-                    <Button active={downvoted.includes(object.id)} size="sm" variant="outline-dark" onClick={() => {
+                    &nbsp;
+                    <Button disabled={!session.auth} active={downvoted.includes(object.id)} size="sm" variant="outline-dark" onClick={() => {
                         handleVote(false, object)
                         setChanged(!changed)
                     }}>▼</Button>
@@ -437,7 +439,7 @@ const QuestionPage: React.FC = (props) => {
                                     <Card.Text>{post?.desc}</Card.Text>
                                 </Col>
                                 <Col xs={3} sm={2} style={{ textAlign: 'center' }}>
-                                    <Button active={upvoted.includes(postid)} size="sm" variant="outline-dark" onClick={() => {
+                                    <Button disabled={!session.auth} active={upvoted.includes(postid)} size="sm" variant="outline-primary" onClick={() => {
                                         handleVote(true, post)
                                         setChanged(!changed)
                                     }}>
@@ -449,7 +451,7 @@ const QuestionPage: React.FC = (props) => {
                                         0
                                     }
                                     </p>
-                                    <Button active={downvoted.includes(postid)} size="sm" variant="outline-dark" onClick={() => {
+                                    <Button disabled={!session.auth} active={downvoted.includes(postid)} size="sm" variant="outline-primary" onClick={() => {
                                         handleVote(false, post)
                                         setChanged(!changed)
                                     }}>▼</Button>
