@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { useFirebase, Firebase } from '../Firebase'
 import { functions, auth, firestore } from 'firebase'
-import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card, Tabs, Tab, DropdownButton, Dropdown, } from 'react-bootstrap'
+import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card, Tabs, Tab, DropdownButton, Dropdown, Modal, InputGroup, Form } from 'react-bootstrap'
 import { useSession } from '../Session'
 import styles from './Home.module.css'
 
@@ -37,6 +37,14 @@ const HomePage: React.FC = () => {
     const [upvoted, setUpvoted] = useState<string[]>([])
     const [downvoted, setDownvoted] = useState<string[]>([])
     const [changed, setChanged] = useState<boolean>(false);
+
+    const [reportMessage, setReportMessage] = useState<string>('')
+    const [reportAuthorName, setReportAuthorName] = useState<string>('')
+    const [reportID, setReportID] = useState<string>('')
+    const [reportHandling, setReportHandling] = useState<boolean>(false)
+    const [reportDone, setReportDone] = useState<boolean>(false);
+
+    const [reportModalShow, setReportModalShow] = useState<boolean>(false)
 
     const getChannels = async () => {
         try {
@@ -177,9 +185,13 @@ const HomePage: React.FC = () => {
         loadPosts()
     }, [session, firebase])
 
+    const handleReportChange = (event: any) => {
+        setReportMessage(event.target.value);
+    }
+
 
     //a feed object
-    const feedCard = (object: { id: string; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string; upvotes: number; bounty?: number; bulletin: boolean }; numComments: number }) => {
+    const feedCard = (object: { id: string; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string; upvotes: number; bounty: number; bulletin: boolean }; numComments: number }) => {
 
         var time = nowSeconds - object.data.timestamp.seconds;
         var message = ''
@@ -306,7 +318,6 @@ const HomePage: React.FC = () => {
                                 <Card.Title>{object.data.title}</Card.Title>
                             </a>
                             <Card.Subtitle>{channelView()}</Card.Subtitle>
-                            <Card.Text className={styles.fontLess}> {object.data.desc}</Card.Text>
                         </div>
                         :
                         <Row>
@@ -319,7 +330,12 @@ const HomePage: React.FC = () => {
                             </Col>
                             <Col xs={3} md={2} style={{ textAlign: 'center' }}>
                                 <Card bg="light" >
-                                    <Card.Title style={{ paddingTop: 10 }}>{object.data.bounty} cr.</Card.Title>
+                                    {object.data.bounty <= 0 ?
+                                        <Card.Title style={{ paddingTop: 10 }}>Claimed</Card.Title>
+                                        :
+                                        <Card.Title style={{ paddingTop: 10 }}>{object.data.bounty} cr.</Card.Title>
+                                    }
+
                                 </Card>
 
                             </Col>
@@ -358,9 +374,18 @@ const HomePage: React.FC = () => {
                         }
 
                         {' '} - posted by <a href={`/user/${object.data.authorName}`}>{`@${object.data.authorName}`}</a> - {message}
+                        {' - '}
+                        &nbsp;
+                        <Button disabled={!session.auth} size="sm" variant='outline-danger' onClick={() => {
+                            setReportAuthorName(object.data.authorName)
+                            setReportID(object.id)
+                            setReportModalShow(true)
+                        }}>
+                            ⚐
+                        </Button>
                     </Card.Text>
                 </Card.Body>
-            </Card>
+            </Card >
             //
         )
     }
@@ -411,8 +436,8 @@ const HomePage: React.FC = () => {
     }
 
     //list of feed objects
-    const feedView = (feedList: { id: string; data: { title: string; desc: string; timestamp: { seconds: number; nanoseconds: number }; author: string; channels: string[]; authorName: string; upvotes: number; bounty?: number; bulletin: boolean }; numComments: number }[]) => {
-        const feedItems = feedList.map((object: { id: string; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string; upvotes: number; bounty?: number; bulletin: boolean }; numComments: number }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
+    const feedView = (feedList: { id: string; data: { title: string; desc: string; timestamp: { seconds: number; nanoseconds: number }; author: string; channels: string[]; authorName: string; upvotes: number; bounty: number; bulletin: boolean }; numComments: number }[]) => {
+        const feedItems = feedList.map((object: { id: string; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string; upvotes: number; bounty: number; bulletin: boolean }; numComments: number }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
         )
         return feedItems
     }
@@ -427,7 +452,7 @@ const HomePage: React.FC = () => {
         }
 
         return (
-            <DropdownButton id="sort" title={feedSort == 'timestamp.seconds' ? 'Most Recent' : 'Top Rated'} variant='light' style={{ paddingTop: 15 }}>
+            <DropdownButton id="sort" title={feedSort == 'bounty' ? 'Highest Bounty' : 'timestamp.seconds' ? 'Most Recent' : 'Top Rated'} variant='light' style={{ paddingTop: 15 }}>
                 <Dropdown.Item active={feedSort == 'timestamp.seconds'}
                     onClick={async () => {
                         if (feedSort == 'timestamp.seconds') {
@@ -440,6 +465,18 @@ const HomePage: React.FC = () => {
                     Most Recent
                                         </Dropdown.Item>
 
+                <Dropdown.Item active={feedSort == 'bounty'}
+                    onClick={async () => {
+                        if (feedSort == 'bounty') {
+                            return
+                        } else {
+                            handleSort('bounty')
+                        }
+                    }}
+                >
+                    Highest Bounty
+                                        </Dropdown.Item>
+
                 <Dropdown.Item active={feedSort == 'upvotes'}
                     onClick={() => {
                         if (feedSort == 'upvotes') {
@@ -449,7 +486,7 @@ const HomePage: React.FC = () => {
                         }
                     }}
                 >
-                    Top of All Time
+                    Top Rated
                                         </Dropdown.Item>
             </DropdownButton>
         )
@@ -495,6 +532,48 @@ const HomePage: React.FC = () => {
 
                 </Nav>
             </Navbar>
+            <Modal show={reportModalShow} onHide={() => {
+                setReportModalShow(false)
+                setReportDone(false)
+                setReportMessage('')
+            }}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Report @{reportAuthorName}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    Let us know if this user is violating community agreements as outlined in our terms of service. Thanks!
+                    </Modal.Body>
+                <Modal.Footer>
+                    <InputGroup>
+                        <Form.Control as="textarea" placeholder="What's the reason for reporting this user?" rows={3} onChange={handleReportChange} value={reportMessage} />
+                    </InputGroup>
+                    {reportHandling ?
+                        <Button disabled variant='danger'>
+                            <Spinner
+                                as="span"
+                                animation="border"
+                                size="sm"
+                                role="status"
+                                aria-hidden="true"
+                            />
+                        </Button>
+                        :
+                        reportDone ?
+                            <Button disabled variant='danger'>Thanks! You can close this window.</Button>
+
+                            :
+                            <Button variant='danger' onClick={async () => {
+                                setReportHandling(true);
+                                await functions().httpsCallable('createReport')({ post: reportID, reportMessage: reportMessage, submittedBy: session.auth?.uid, timestamp: firestore.Timestamp.now() }).then(() => {
+                                    setReportHandling(false);
+                                    setReportDone(true);
+                                })
+                            }}>Report
+                        </Button>
+                    }
+
+                </Modal.Footer>
+            </Modal>
             <Container className={styles.paddingTop}>
                 <Row>
                     <Col>
@@ -512,7 +591,23 @@ const HomePage: React.FC = () => {
                             allFeed[0] ?
                                 <div>
                                     {feedView(allFeed)}
-                                    <Button variant='light' onClick={() => { getPosts(allSort, 'all', allFeed, lastAll, setLastAll, setAllFeed, setAllLoadingDone, [], false) }}>Load more</Button>
+                                    {allLoadingDone ?
+                                        <Button variant='light' onClick={() => {
+                                            setAllLoadingDone(false)
+                                            getPosts(allSort, 'all', allFeed, lastAll, setLastAll, setAllFeed, setAllLoadingDone, [], false)
+                                        }}>Load more</Button>
+                                        :
+                                        <Button disabled variant="light">
+                                            <Spinner
+                                                as="span"
+                                                animation="border"
+                                                size="sm"
+                                                role="status"
+                                                aria-hidden="true"
+                                            />
+                                        </Button>
+                                    }
+
                                 </div>
 
                                 :
@@ -533,7 +628,22 @@ const HomePage: React.FC = () => {
                             homeFeed[0] ?
                                 <div>
                                     {feedView(homeFeed)}
-                                    <Button variant='light' onClick={() => { getPosts(homeSort, 'home', homeFeed, lastHome, setLastHome, setHomeFeed, setHomeLoadingDone, channels, false) }}>Load more</Button>
+                                    {homeLoadingDone ?
+                                        <Button variant='light' onClick={() => {
+                                            setHomeLoadingDone(false)
+                                            getPosts(homeSort, 'home', homeFeed, lastHome, setLastHome, setHomeFeed, setHomeLoadingDone, channels, false)
+                                        }}>Load more</Button>
+                                        :
+                                        <Button disabled variant='light'>
+                                            <Spinner
+                                                as="span"
+                                                animation="border"
+                                                size="sm"
+                                                role="status"
+                                                aria-hidden="true"
+                                            />
+                                        </Button>}
+
                                 </div>
 
                                 :
@@ -561,7 +671,22 @@ const HomePage: React.FC = () => {
                             academic[0] ?
                                 <div>
                                     {feedView(academic)}
-                                    <Button variant='light' onClick={() => { getPosts(acadSort, 'academic', academic, lastAcad, setLastAcad, setAcademic, setAcadLoadingDone, channels, false) }}>Load more</Button>
+                                    {acadLoadingDone ?
+                                        <Button variant='light' onClick={() => {
+                                            setAcadLoadingDone(false)
+                                            getPosts(acadSort, 'academic', academic, lastAcad, setLastAcad, setAcademic, setAcadLoadingDone, channels, false)
+                                        }}>Load more</Button>
+                                        :
+                                        <Button disabled variant='light'>
+                                            <Spinner
+                                                as="span"
+                                                animation="border"
+                                                size="sm"
+                                                role="status"
+                                                aria-hidden="true"
+                                            />
+                                        </Button>}
+
                                 </div>
 
                                 :
@@ -589,7 +714,23 @@ const HomePage: React.FC = () => {
                             bulletin[0] ?
                                 <div>
                                     {feedView(bulletin)}
-                                    <Button variant='light' onClick={() => { getPosts(bulSort, 'bulletin', bulletin, lastBul, setLastBul, setBulletin, setBulLoadingDone, channels, false) }}>Load more</Button>
+                                    {bulLoadingDone ?
+                                        <Button variant='light' onClick={() => {
+                                            setBulLoadingDone(false)
+                                            getPosts(bulSort, 'bulletin', bulletin, lastBul, setLastBul, setBulletin, setBulLoadingDone, channels, false)
+                                        }}>Load more</Button>
+                                        :
+                                        <Button disabled variant='light'>
+                                            <Spinner
+                                                as="span"
+                                                animation="border"
+                                                size="sm"
+                                                role="status"
+                                                aria-hidden="true"
+                                            />
+                                        </Button>
+                                    }
+
                                 </div>
 
                                 :

@@ -17,15 +17,27 @@ exports.createComment = functions.https.onCall(async (data, context) => {
     await admin.firestore().collection('comments').doc().set(data);
 })
 
+exports.createReport = functions.https.onCall(async (data, context) => {
+    await admin.firestore().collection('reports').doc().set(data);
+})
+
 exports.chooseAwardCredits = functions.https.onCall(async (data, context) => {
     const post = await admin.firestore().collection('posts').doc(data.post).get()
     if (post.data().awarded == true) {
+        console.log("error")
         return
     } else {
-        await admin.firestore().collection('users').doc(data.author).update({ credits: data.bounty })
+        await admin.firestore().collection('users').doc(data.author).update({ credits: admin.firestore.FieldValue.increment(Number(data.award)) })
         console.log('data.comment = ', data.comment)
-        await admin.firestore().collection('posts').doc(data.post).update({ awarded: true })
-        await admin.firestore().collection('comments').doc(data.comment).update({ selected: data.bounty })
+        if (Number(data.award) < Number(data.bounty)) {
+            await admin.firestore().collection('posts').doc(data.post).update({ bounty: admin.firestore.FieldValue.increment(0 - Number(data.award)) })
+        } else if (Number(data.award) > Number(data.bounty)) {
+            await admin.firestore().collection('posts').doc(data.post).update({ awarded: true, bounty: admin.firestore.FieldValue.increment(0 - Number(data.award)) })
+            await admin.firestore().collection('users').doc(context.auth?.uid).update({ credits: admin.firestore.FieldValue.increment(Number(data.bounty) - Number(data.award)) })
+        } else {
+            await admin.firestore().collection('posts').doc(data.post).update({ awarded: true, bounty: admin.firestore.FieldValue.increment(0 - Number(data.award)) })
+        }
+        await admin.firestore().collection('comments').doc(data.comment).update({ selected: data.award })
     }
 })
 

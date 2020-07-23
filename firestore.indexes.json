@@ -29,6 +29,20 @@
       ]
     },
     {
+      "collectionGroup": "comments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "thread",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "upvotes",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "posts",
       "queryScope": "COLLECTION",
       "fields": [
@@ -75,11 +89,39 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
+          "fieldPath": "awarded",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp.seconds",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "posts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
           "fieldPath": "bulletin",
           "order": "ASCENDING"
         },
         {
           "fieldPath": "timestamp.seconds",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "posts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "channels",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "bounty",
           "order": "DESCENDING"
         }
       ]

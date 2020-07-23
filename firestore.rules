@@ -3,8 +3,8 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     match /users/{userID} {
-      allow read: if true
-      allow write: if request.auth.uid == userID
+      allow read: if true;
+      allow write: if request.auth.uid == userID;
     }
 
     match /posts/{postID} {
@@ -14,6 +14,11 @@ service cloud.firestore {
 
     match /comments/{commentID} {
       allow read: if true;
+      allow write: if request.auth.uid != null;
+    }
+
+    match /reports/{reportID} {
+      allow read: if false;
       allow write: if request.auth.uid != null;
     }
   }

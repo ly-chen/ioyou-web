@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom';
 import { useFirebase, Firebase } from '../Firebase'
 import { functions, auth, firestore } from 'firebase'
-import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card, Form } from 'react-bootstrap'
+import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card, Form, Modal, InputGroup, FormControl } from 'react-bootstrap'
 import { useSession } from '../Session'
 import styles from './Question.module.css'
 
@@ -40,6 +40,24 @@ const QuestionPage: React.FC = (props) => {
     const [upvoted, setUpvoted] = useState<string[]>([])
     const [downvoted, setDownvoted] = useState<string[]>([])
 
+    const [awardModalShow, setAwardModalShow] = useState<boolean>(false)
+    const [award, setAward] = useState<number>(0)
+    const [awardCheck, setAwardCheck] = useState<boolean>(false)
+    const [awardHandling, setAwardHandling] = useState<boolean>(false)
+    const [err, setErr] = useState<string>('')
+
+    const [reportMessage, setReportMessage] = useState<string>('')
+    const [reportAuthorName, setReportAuthorName] = useState<string>('')
+    const [reportID, setReportID] = useState<string>('')
+    const [reportHandling, setReportHandling] = useState<boolean>(false)
+    const [reportDone, setReportDone] = useState<boolean>(false);
+
+    const [reportModalShow, setReportModalShow] = useState<boolean>(false)
+
+    const [commentAuthorName, setCommentAuthorName] = useState<string>('')
+    const [commentAuthor, setCommentAuthor] = useState<string>('')
+    const [commentID, setCommentID] = useState<string>('')
+
     const getComments = async (id: string) => {
         try {
             var docList: any[] = []
@@ -66,6 +84,18 @@ const QuestionPage: React.FC = (props) => {
 
         } catch (e) {
             console.log(e)
+        }
+    }
+
+    const handleAwardChange = (event: any) => {
+        const check = /^[0-9\b]+$/;
+        setAward(event.target.value);
+        if (event.target.value.match(check)) {
+            setAwardCheck(true);
+            console.log('passCheck')
+        } else {
+            setAwardCheck(false);
+            console.log('failCheck')
         }
     }
 
@@ -249,7 +279,7 @@ const QuestionPage: React.FC = (props) => {
         event.preventDefault()
         setReplyHandling(true);
         console.log(replyText)
-        const newReply = { comment: replyText, parent: reply, thread: postid, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, authorName: self.username, upvotes: 0 }
+        const newReply = { comment: replyText, parent: reply, thread: postid, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, authorName: self.username, upvotes: 0, selected: 0 }
         await functions().httpsCallable('createComment')(newReply).then(async () => {
             setComments(await getComments(postid))
             setNumComments(numComments + 1)
@@ -263,7 +293,7 @@ const QuestionPage: React.FC = (props) => {
         event.preventDefault()
         setHandling(true);
         console.log(answer)
-        const newComment = { comment: answer, parent: postid, thread: postid, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, authorName: self.username, upvotes: 0, selected: false }
+        const newComment = { comment: answer, parent: postid, thread: postid, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, authorName: self.username, upvotes: 0, selected: 0 }
         await functions().httpsCallable('createComment')(newComment).then(async () => {
             setComments(await getComments(postid))
             setNumComments(numComments + 1)
@@ -273,6 +303,13 @@ const QuestionPage: React.FC = (props) => {
         })
     }
 
+    const handleReportChange = (event: any) => {
+        setReportMessage(event.target.value);
+    }
+
+    /*
+    <Button variant="primary" size="sm" onClick={() => { functions().httpsCallable('chooseAwardCredits')({ author: object.data.author, bounty: post.bounty, post: postid, comment: object.id }) }}>Award</Button>
+    */
     //a feed object
     const feedCard = (object: { id: string; data: { comment: string; timestamp: { seconds: number, nanoseconds: number }; author: string; authorName: string; parent: string; thread: string; upvotes: number; selected: number }; replies: any[] }) => {
         var time = nowSeconds - object.data.timestamp.seconds;
@@ -301,6 +338,7 @@ const QuestionPage: React.FC = (props) => {
         return (
 
             <div className={styles.borderLeft} style={{ marginBottom: 10, paddingLeft: 10, paddingTop: 10 }}>
+                
                 {object.data.selected > 0 ?
                     <Row>
                         <Col>
@@ -312,14 +350,18 @@ const QuestionPage: React.FC = (props) => {
                         </Col>
                     </Row>
                     :
-                    postSelf && post.awarded == false ?
+                    postSelf ?
                         <Row>
                             <Col>
                                 <p style={{ fontSize: 20 }}>{`@${object.data.authorName}`}</p>
                                 <p className={styles.fontLess}> {object.data.comment}</p>
                             </Col>
-                            <Col xs={3} md={1}>
-                                <Button variant="primary" size="sm" onClick={() => { functions().httpsCallable('chooseAwardCredits')({ author: object.data.author, bounty: post.bounty, post: postid, comment: object.id }) }}>Award</Button>
+                            <Col xs={3} md={2}>
+                                <Button variant="primary" size="sm" onClick={() => { 
+                                    setCommentAuthorName(object.data.authorName)
+                                    setCommentAuthor(object.data.author)
+                                    setCommentID(object.id)
+                                    setAwardModalShow(true) }}>Award</Button>
                             </Col>
                         </Row>
                         :
@@ -355,6 +397,15 @@ const QuestionPage: React.FC = (props) => {
                     {' - '}
                     <Button variant="light" size="sm" onClick={() => { setReply(object.id) }}>Reply</Button>
                     {' '} - {message}
+                    {' - '}
+                    &nbsp;
+                    <Button disabled={!session.auth} size="sm" variant='outline-danger' onClick={() => {
+                        setReportAuthorName(object.data.authorName)
+                        setReportID(object.id)
+                        setReportModalShow(true)
+                    }}>
+                        ⚐
+                    </Button>
                 </p>
 
 
@@ -437,6 +488,7 @@ const QuestionPage: React.FC = (props) => {
                             }} style={{ marginRight: 10 }}>
                                 Profile
                             </Button>
+                            <Button href="/new" variant="outline-dark" style={{ marginRight: 10 }}>Post</Button>
                             <Button variant="outline-dark" onClick={() => {
                                 window.location.reload()
                                 firebase.doSignOut()
@@ -457,6 +509,91 @@ const QuestionPage: React.FC = (props) => {
                         </div>}
                 </Nav>
             </Navbar>
+                <Modal show={awardModalShow} onHide={() => { setAwardModalShow(false) }}>
+                    <Modal.Header closeButton>
+                        <Modal.Title>Award @{commentAuthorName}!</Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+                        Awards cannot be taken back once submitted.
+                        
+                    </Modal.Body>
+                    <Modal.Footer>
+                        <InputGroup>
+                            <Form.Control placeholder="How many credits?" onChange={handleAwardChange} value={award} />
+                            <Form.Text>{err}</Form.Text>
+                        </InputGroup>
+                        {awardHandling ? 
+                            <Button disabled>
+                                <Spinner
+                                as="span"
+                                animation="border"
+                                size="sm"
+                                role="status"
+                                aria-hidden="true"
+                            />
+                            </Button>
+                            :
+                            <Button onClick={() => {
+                                console.log('award = ', award)
+                                if (award > Number(post.bounty) + Number(self.credits)) {
+                                    setErr(`You have ${Number(post.bounty) + Number(self.credits)} credits to give.`)
+                                } else if (awardCheck == false || award < 1) {
+                                    setErr(`Input at least 1 credit.`)
+                                } else {
+                                    setAwardHandling(true)
+                                    functions().httpsCallable('chooseAwardCredits')({ author: commentAuthor, bounty: Number(post.bounty), post: postid, comment: commentID, award: Number(award) }).then(() => {
+                                        setAwardModalShow(false)
+                                        window.location.reload()
+                                    })
+                                }
+                            }}>Award</Button>
+                            }
+                        
+                    </Modal.Footer>
+                </Modal>
+
+            <Modal show={reportModalShow} onHide={() => {
+                setReportModalShow(false)
+                setReportDone(false)
+                setReportMessage('')
+            }}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Report @{reportAuthorName}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    Let us know if this user is violating community agreements as outlined in our terms of service. Thanks!
+                    </Modal.Body>
+                <Modal.Footer>
+                    <InputGroup>
+                        <Form.Control as="textarea" placeholder="What's the reason for reporting this user?" rows={3} onChange={handleReportChange} value={reportMessage} />
+                    </InputGroup>
+                    {reportHandling ?
+                        <Button disabled variant='danger'>
+                            <Spinner
+                                as="span"
+                                animation="border"
+                                size="sm"
+                                role="status"
+                                aria-hidden="true"
+                            />
+                        </Button>
+                        :
+                        reportDone ?
+                            <Button disabled variant='danger'>Thanks! You can close this window.</Button>
+
+                            :
+                            <Button variant='danger' onClick={async () => {
+                                setReportHandling(true);
+                                await functions().httpsCallable('createReport')({ post: reportID, reportMessage: reportMessage, submittedBy: session.auth?.uid, timestamp: firestore.Timestamp.now() }).then(() => {
+                                    setReportHandling(false);
+                                    setReportDone(true);
+                                })
+                            }}>Report
+                        </Button>
+                    }
+
+                </Modal.Footer>
+            </Modal>
             {post ?
                 <Container className={styles.paddingTop}>
                     <Card style={{ marginBottom: 30 }}>
@@ -486,13 +623,28 @@ const QuestionPage: React.FC = (props) => {
                                     }}>▼</Button>
 
                                     <Card bg="light" style={{ marginTop: 15 }}>
-                                        <Card.Title style={{ paddingTop: 10 }}>{post?.bounty} cr.</Card.Title>
+                                        {post?.bounty <= 0 ?
+                                            <Card.Title style={{ paddingTop: 10 }}>Claimed</Card.Title>
+                                            :
+                                            <Card.Title style={{ paddingTop: 10 }}>{post?.bounty} cr.</Card.Title>
+                                        }
+                                        
                                     </Card>
                                 </Col>
                             </Row>
 
 
-                            <Card.Text className={styles.fontLess} style={{ paddingTop: 10 }}>Posted by <a href={`/user/${post?.authorName}`}>{`@${post?.authorName}`}</a> {timeMessage}</Card.Text>
+                            <Card.Text className={styles.fontLess} style={{ paddingTop: 10 }}>Posted by <a href={`/user/${post?.authorName}`}>{`@${post?.authorName}`}</a> {timeMessage}
+                            {' - '}
+                            &nbsp;
+                            <Button disabled={!session.auth} size="sm" variant='outline-danger' onClick={() => {
+                                    setReportAuthorName(post.authorName)
+                                    setReportID(postid)
+                                    setReportModalShow(true)
+                                }}>
+                                    ⚐
+                            </Button>
+                            </Card.Text>
                         </Card.Body>
                     </Card>
 

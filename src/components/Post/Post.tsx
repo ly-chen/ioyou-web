@@ -136,7 +136,7 @@ const PostPage: React.FC = () => {
         console.log(description)
         let newPost = null;
         if (selectBul) {
-            newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: [], authorName: name, bulletin: selectBul, upvotes: 0 }
+            newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: [], authorName: name, bulletin: selectBul, upvotes: 0, bounty: Number(bounty), awarded: true }
         } else {
             if (bounty == 0 || bountyCheck == false || bounty > userDoc.credits) {
                 event.preventDefault()
@@ -148,9 +148,9 @@ const PostPage: React.FC = () => {
                 return
             } else {
                 if (channels.length == 0) {
-                    newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: ['General'], authorName: name, bulletin: false, upvotes: 0, bounty: bounty, awarded: false }
+                    newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: ['General'], authorName: name, bulletin: false, upvotes: 0, bounty: Number(bounty), awarded: false }
                 } else {
-                    newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: channels, authorName: name, upvotes: 0, bulletin: false, bounty: bounty, awarded: false }
+                    newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: channels, authorName: name, upvotes: 0, bulletin: false, bounty: Number(bounty), awarded: false }
                 }
             }
         }
