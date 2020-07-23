@@ -51,7 +51,7 @@ const SignupPage: React.FC = () => {
                     if (newUser) {
                         console.log('this is triggered 2')
                         const uid = newUser?.user?.uid
-                        await firestore().collection('users').doc(uid).set({ name: name, username: username, actives: { 'Arts': false, 'Biology': false, 'Business': false, 'Computer Science': false, 'Economics': false, 'Finance': false, 'French': false, 'General': false, 'Humanities': false, 'Languages (General)': false, 'Mandarin': false, 'Psychology': false, 'Spanish': false, 'bulletin': true } }).then(() => {
+                        await firestore().collection('users').doc(uid).set({ name: name, username: username, actives: { 'Arts': false, 'Biology': false, 'Business': false, 'Computer Science': false, 'Economics': false, 'Finance': false, 'French': false, 'General': true, 'Humanities': false, 'Languages (General)': false, 'Mandarin': false, 'Psychology': false, 'Spanish': false, 'bulletin': true }, upvoted: [], downvoted: [], credits: 25 }).then(() => {
                             window.location.href = `/user/${username}`
                         })
                     }
@@ -62,6 +62,7 @@ const SignupPage: React.FC = () => {
                 }
             }
         }
+        setHandling(false);
     }
 
     const checkUsername = async (username: string) => {

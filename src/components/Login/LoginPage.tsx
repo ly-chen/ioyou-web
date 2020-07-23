@@ -39,6 +39,7 @@ const LoginPage: React.FC = () => {
             } catch (e) {
                 console.log(e);
                 setErr(e.message);
+                setHandling(false);
             }
         }
         console.log(validated);

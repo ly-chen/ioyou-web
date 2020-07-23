@@ -14,14 +14,18 @@ const PostPage: React.FC = () => {
     const [allChannels, setAllChannels] = useState<Array<string>>(['Arts', 'Business', 'Computer Science', 'Economics', 'Finance', 'History', 'Humanities', 'French', 'Mandarin', 'Spanish', 'Languages (General)', 'Mathematics', 'Biology', 'Chemistry', 'Physics', 'Sciences (General)', 'Psychology', 'Sociology', 'Social Sciences (General)', 'General'])
     const [title, setTitle] = useState<string>("")
     const [description, setDescription] = useState<string>("")
+    const [bounty, setBounty] = useState<number>(0);
+    const [bountyCheck, setBountyCheck] = useState<boolean>(false);
 
     const [err, setErr] = useState<string>("")
+    const [bountyErr, setBountyErr] = useState<string>("")
 
     const [handling, setHandling] = useState<boolean>(false)
 
     const [input, setInput] = useState<string>("")
 
     const [name, setName] = useState<string>("")
+    const [userDoc, setUserDoc] = useState<any>(null);
 
     const [selectBul, setSelectBul] = useState<boolean>(false)
 
@@ -32,6 +36,7 @@ const PostPage: React.FC = () => {
             const getUser = async () => {
                 const user = await firestore().collection('users').doc(session.auth?.uid).get()
                 setName(user.data()?.username)
+                setUserDoc(user.data())
             }
             getUser()
         }
@@ -112,6 +117,18 @@ const PostPage: React.FC = () => {
         setDescription(event.target.value)
     }
 
+    const handleBountyChange = (event: any) => {
+        const check = /^[0-9\b]+$/;
+        setBounty(event.target.value);
+        if (event.target.value.match(check)) {
+            setBountyCheck(true);
+            console.log('passCheck')
+        } else {
+            setBountyCheck(false);
+            console.log('failCheck')
+        }
+    }
+
     const handleSubmit = async (event: any) => {
         setHandling(true);
         event.preventDefault()
@@ -121,14 +138,25 @@ const PostPage: React.FC = () => {
         if (selectBul) {
             newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: [], authorName: name, bulletin: selectBul, upvotes: 0 }
         } else {
-            if (channels.length == 0) {
-                newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: ['General'], authorName: name, bulletin: false, upvotes: 0 }
+            if (bounty == 0 || bountyCheck == false || bounty > userDoc.credits) {
+                event.preventDefault()
+                event.stopPropagation()
+                setHandling(false)
+                if (bounty > userDoc.credits) {
+                    setBountyErr(`You have ${userDoc.credits} credit(s) left.`)
+                }
+                return
             } else {
-                newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: channels, authorName: name, upvotes: 0, bulletin: false }
+                if (channels.length == 0) {
+                    newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: ['General'], authorName: name, bulletin: false, upvotes: 0, bounty: bounty, awarded: false }
+                } else {
+                    newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: channels, authorName: name, upvotes: 0, bulletin: false, bounty: bounty, awarded: false }
+                }
             }
         }
 
         await functions().httpsCallable('createPost')(newPost)
+        await firebase.db.collection('users').doc(session?.auth?.uid).update({ credits: userDoc.credits - bounty })
         window.location.href = "/"
     }
 
@@ -175,7 +203,13 @@ const PostPage: React.FC = () => {
                                     {selectedView()}
                                     {subjectsView()}
                                 </Row>
-                                <Form.Control type="text" placeholder="What subjects?" onChange={handleChannelChange} value={input} />
+                                <Form.Control type="text" placeholder={channels.length > 0 ? "Add additional subjects if necessary." : "What subjects?"} onChange={handleChannelChange} onBlur={() => {
+                                    if (channelList.length == 1) {
+                                        setChannels([...channels, ...channelList])
+                                        setInput('')
+                                        setChannelList([])
+                                    }
+                                }} value={input} />
                                 <Form.Text className="text-danger">
                                     {err}
                                 </Form.Text>
@@ -191,6 +225,30 @@ const PostPage: React.FC = () => {
                             <Form.Label>Description</Form.Label>
                             <Form.Control as="textarea" rows={3} placeholder="Add more details if necessary." onChange={handleDescriptionChange} />
                         </Form.Group>
+
+                        {selectBul ?
+                            <div></div>
+                            :
+                            <Form.Group controlId="bounty">
+                                <Form.Label>Bounty</Form.Label>
+                                <Form.Control required as="input" placeholder="Credits" onChange={handleBountyChange} value={bounty} />
+                                {bounty > 0 && bountyCheck == true ?
+                                    bounty > userDoc.credits ?
+                                        <Form.Text className='text-danger'>
+                                            {bountyErr}
+                                        </Form.Text>
+                                        :
+                                        <Form.Text className="text-success">
+                                            Looks good!
+                                </Form.Text>
+                                    :
+                                    <Form.Text className="text-danger">
+                                        At least 1 credit must be posted.
+                                </Form.Text>
+                                }
+
+                            </Form.Group>
+                        }
 
                         {handling ?
                             <Button variant="primary" disabled style={{ marginTop: 15 }}>

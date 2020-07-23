@@ -51,7 +51,7 @@ const ProfilePage: React.FC = () => {
         }
 
         return (
-            <DropdownButton id="sort" title='Sort' variant='light' style={{ paddingBottom: 15 }}>
+            <DropdownButton id="sort" title={sort == 'timestamp.seconds' ? 'Most Recent' : 'Top Rated'} variant='light' style={{ paddingBottom: 15 }}>
                 <Dropdown.Item active={sort == 'timestamp.seconds'}
                     onClick={async () => {
                         if (sort == 'timestamp.seconds') {
@@ -596,7 +596,7 @@ const ProfilePage: React.FC = () => {
                             }} style={{ marginRight: 10 }}>
                                 Profile
                             </Button>
-                            <Button href="/post" variant="outline-dark" style={{ marginRight: 10 }}>Post</Button>
+                            <Button href="/new" variant="outline-dark" style={{ marginRight: 10 }}>Post</Button>
                             <Button variant="light" onClick={() => {
                                 setUserSelf(false);
                                 firebase.doSignOut()
@@ -634,7 +634,12 @@ const ProfilePage: React.FC = () => {
                                         <h2>{user.name}</h2>
                                     </Col>
                                     <Col>
-                                        <h3>Credits: </h3>
+                                        {user.credits == 1 ?
+                                            <h3>1 credit</h3>
+                                            :
+                                            <h3>{user.credits} credits</h3>
+                                        }
+
                                     </Col>
                                 </Row>
 
@@ -645,7 +650,7 @@ const ProfilePage: React.FC = () => {
                                     <h3 style={{ paddingRight: 15 }}>Channels</h3>
                                     {userSelf ?
                                         editSubjects ?
-                                            <Button variant="outline-dark" onClick={async () => {
+                                            <Button variant="primary" onClick={async () => {
                                                 setEditSubjects(false)
                                                 await firestore().collection('users').doc(session.auth?.uid).update({ actives: actives })
 

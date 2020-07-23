@@ -179,7 +179,7 @@ const HomePage: React.FC = () => {
 
 
     //a feed object
-    const feedCard = (object: { id: string; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string; upvotes: number }; numComments: number }) => {
+    const feedCard = (object: { id: string; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string; upvotes: number; bounty?: number; bulletin: boolean }; numComments: number }) => {
 
         var time = nowSeconds - object.data.timestamp.seconds;
         var message = ''
@@ -299,36 +299,58 @@ const HomePage: React.FC = () => {
 
             <Card style={{ marginBottom: 20 }}>
                 <Card.Body>
-                    <Row>
-                        <Col>
+
+                    {object.data.bulletin ?
+                        <div>
                             <a href={`/post/${object.id}`}>
                                 <Card.Title>{object.data.title}</Card.Title>
                             </a>
                             <Card.Subtitle>{channelView()}</Card.Subtitle>
                             <Card.Text className={styles.fontLess}> {object.data.desc}</Card.Text>
+                        </div>
+                        :
+                        <Row>
+                            <Col>
+                                <a href={`/post/${object.id}`}>
+                                    <Card.Title>{object.data.title}</Card.Title>
+                                </a>
+                                <Card.Subtitle>{channelView()}</Card.Subtitle>
 
-                        </Col>
-                        <Col xs={3} sm={2} style={{ textAlign: 'center' }}>
-                            <Button disabled={!session.auth} size="sm" active={upvoted.includes(object.id)} variant="outline-primary" onClick={() => {
-                                handleVote(true)
-                                setChanged(!changed)
-                            }}>
-                                ▲
-                            </Button>
-                            <p>{object.data.upvotes ?
-                                object.data.upvotes
-                                :
-                                0
-                            }
-                            </p>
-                            <Button disabled={!session.auth} size="sm" active={downvoted.includes(object.id)} variant="outline-danger" onClick={() => {
-                                handleVote(false)
-                                setChanged(!changed)
-                            }}>▼</Button>
-                        </Col>
-                    </Row>
+                            </Col>
+                            <Col xs={3} md={2} style={{ textAlign: 'center' }}>
+                                <Card bg="light" >
+                                    <Card.Title style={{ paddingTop: 10 }}>{object.data.bounty} cr.</Card.Title>
+                                </Card>
+
+                            </Col>
+                        </Row>
+                    }
+
+                    <Card.Text className={styles.fontLess}> {object.data.desc}</Card.Text>
+
 
                     <Card.Text className={styles.fontLess} style={{ paddingTop: 10 }}>
+                        <Button disabled={!session.auth} size="sm" active={upvoted.includes(object.id)} variant="outline-primary" onClick={() => {
+                            handleVote(true)
+                            setChanged(!changed)
+                        }}>
+                            ▲
+                            </Button>
+                        {' '}
+                        &nbsp;
+                        {object.data.upvotes ?
+                            object.data.upvotes
+                            :
+                            0
+                        }
+                        {' '}
+                        &nbsp;
+                        <Button disabled={!session.auth} size="sm" active={downvoted.includes(object.id)} variant="outline-danger" onClick={() => {
+                            handleVote(false)
+                            setChanged(!changed)
+                        }}>▼</Button>
+                        {' '}
+                        &nbsp;
                         {object.numComments == 1 ?
                             <a href={`/post/${object.id}`}>{object.numComments} comment</a>
                             :
@@ -389,8 +411,8 @@ const HomePage: React.FC = () => {
     }
 
     //list of feed objects
-    const feedView = (feedList: { id: string; data: { title: string; desc: string; timestamp: { seconds: number; nanoseconds: number }; author: string; channels: string[]; authorName: string; upvotes: number }; numComments: number }[]) => {
-        const feedItems = feedList.map((object: { id: string; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string; upvotes: number }; numComments: number }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
+    const feedView = (feedList: { id: string; data: { title: string; desc: string; timestamp: { seconds: number; nanoseconds: number }; author: string; channels: string[]; authorName: string; upvotes: number; bounty?: number; bulletin: boolean }; numComments: number }[]) => {
+        const feedItems = feedList.map((object: { id: string; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string; upvotes: number; bounty?: number; bulletin: boolean }; numComments: number }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
         )
         return feedItems
     }
@@ -405,7 +427,7 @@ const HomePage: React.FC = () => {
         }
 
         return (
-            <DropdownButton id="sort" title='Sort' variant='light' style={{ paddingTop: 15 }}>
+            <DropdownButton id="sort" title={feedSort == 'timestamp.seconds' ? 'Most Recent' : 'Top Rated'} variant='light' style={{ paddingTop: 15 }}>
                 <Dropdown.Item active={feedSort == 'timestamp.seconds'}
                     onClick={async () => {
                         if (feedSort == 'timestamp.seconds') {

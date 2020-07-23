@@ -14,6 +14,7 @@ const QuestionPage: React.FC = (props) => {
 
     const [self, setSelf] = useState<any>(null);
     const [post, setPost] = useState<any>(null);
+    const [postSelf, setPostSelf] = useState<boolean>(false);
 
     const [answer, setAnswer] = useState<string>("")
     const [comments, setComments] = useState<any[] | undefined>(undefined)
@@ -179,7 +180,6 @@ const QuestionPage: React.FC = (props) => {
                 if (selfDoc?.downvoted) {
                     setDownvoted(selfDoc?.downvoted)
                 }
-
             }
             getSelf();
         }
@@ -218,6 +218,9 @@ const QuestionPage: React.FC = (props) => {
                 }
 
                 setPost(postDoc)
+                if (postDoc?.author == session?.auth?.uid) {
+                    setPostSelf(true)
+                }
                 const commentsTest = await getComments(postid);
                 console.log(commentsTest)
                 setComments(commentsTest)
@@ -260,7 +263,7 @@ const QuestionPage: React.FC = (props) => {
         event.preventDefault()
         setHandling(true);
         console.log(answer)
-        const newComment = { comment: answer, parent: postid, thread: postid, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, authorName: self.username, upvotes: 0 }
+        const newComment = { comment: answer, parent: postid, thread: postid, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, authorName: self.username, upvotes: 0, selected: false }
         await functions().httpsCallable('createComment')(newComment).then(async () => {
             setComments(await getComments(postid))
             setNumComments(numComments + 1)
@@ -271,7 +274,7 @@ const QuestionPage: React.FC = (props) => {
     }
 
     //a feed object
-    const feedCard = (object: { id: string; data: { comment: string; timestamp: { seconds: number, nanoseconds: number }; author: string; authorName: string; parent: string; thread: string; upvotes: number }; replies: any[] }) => {
+    const feedCard = (object: { id: string; data: { comment: string; timestamp: { seconds: number, nanoseconds: number }; author: string; authorName: string; parent: string; thread: string; upvotes: number; selected: number }; replies: any[] }) => {
         var time = nowSeconds - object.data.timestamp.seconds;
         var message = ''
         if (time < 120) {
@@ -298,9 +301,35 @@ const QuestionPage: React.FC = (props) => {
         return (
 
             <div className={styles.borderLeft} style={{ marginBottom: 10, paddingLeft: 10, paddingTop: 10 }}>
+                {object.data.selected > 0 ?
+                    <Row>
+                        <Col>
+                            <p style={{ fontSize: 20 }}>{`@${object.data.authorName}`}</p>
+                            <p className={styles.fontLess}> {object.data.comment}</p>
+                        </Col>
+                        <Col xs={3} md={2}>
+                            <Button variant="success" size="sm">{object.data.selected} cr.</Button>
+                        </Col>
+                    </Row>
+                    :
+                    postSelf && post.awarded == false ?
+                        <Row>
+                            <Col>
+                                <p style={{ fontSize: 20 }}>{`@${object.data.authorName}`}</p>
+                                <p className={styles.fontLess}> {object.data.comment}</p>
+                            </Col>
+                            <Col xs={3} md={1}>
+                                <Button variant="primary" size="sm" onClick={() => { functions().httpsCallable('chooseAwardCredits')({ author: object.data.author, bounty: post.bounty, post: postid, comment: object.id }) }}>Award</Button>
+                            </Col>
+                        </Row>
+                        :
+                        <div>
+                            <p style={{ fontSize: 20 }}>{`@${object.data.authorName}`}</p>
+                            <p className={styles.fontLess}> {object.data.comment}</p>
+                        </div>
 
-                <p style={{ fontSize: 20 }}>{`@${object.data.authorName}`}</p>
-                <p className={styles.fontLess}> {object.data.comment}</p>
+                }
+
 
 
                 <p className={styles.fontLess}>
@@ -373,8 +402,8 @@ const QuestionPage: React.FC = (props) => {
     }
 
     //list of feed objects
-    const feedView = (feedList: { id: string; data: { comment: string; timestamp: { seconds: number; nanoseconds: number }; author: string; authorName: string; parent: string; thread: string; upvotes: number }; replies: any[] }[]) => {
-        const feedItems = feedList.map((object: { id: string; data: { comment: string; timestamp: { seconds: number, nanoseconds: number }; author: string; authorName: string; parent: string; thread: string; upvotes: number }; replies: any[] }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
+    const feedView = (feedList: { id: string; data: { comment: string; timestamp: { seconds: number; nanoseconds: number }; author: string; authorName: string; parent: string; thread: string; upvotes: number; selected: number }; replies: any[] }[]) => {
+        const feedItems = feedList.map((object: { id: string; data: { comment: string; timestamp: { seconds: number, nanoseconds: number }; author: string; authorName: string; parent: string; thread: string; upvotes: number; selected: number }; replies: any[] }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
         )
         return feedItems
     }
@@ -455,6 +484,10 @@ const QuestionPage: React.FC = (props) => {
                                         handleVote(false, post)
                                         setChanged(!changed)
                                     }}>▼</Button>
+
+                                    <Card bg="light" style={{ marginTop: 15 }}>
+                                        <Card.Title style={{ paddingTop: 10 }}>{post?.bounty} cr.</Card.Title>
+                                    </Card>
                                 </Col>
                             </Row>
 
