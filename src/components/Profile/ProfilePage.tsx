@@ -6,6 +6,7 @@ import { Navbar, Nav, Button, DropdownButton, Dropdown, Container, Row, Col, Spi
 import { useSession } from '../Session'
 import styles from './Profile.module.css'
 import { StringLocale } from 'yup';
+import { NavBar } from '../../constants'
 
 const ProfilePage: React.FC = () => {
     const { username } = useParams()
@@ -581,44 +582,7 @@ const ProfilePage: React.FC = () => {
 
     return (
         <div>
-            <Navbar bg="light" variant="light">
-                <Navbar.Brand href="/">
-                    {' '}
-                            ioyou
-                    </Navbar.Brand>
-                <Nav className="ml-auto">
-                    {session.auth ?
-                        <div>
-                            <Button variant="light" onClick={async () => {
-                                const user = await firebase.db.collection('users').doc(session?.auth?.uid).get()
-                                const username = user?.data()?.username
-                                window.location.href = `/user/${username}`
-                            }} style={{ marginRight: 10 }}>
-                                Profile
-                            </Button>
-                            <Button href="/new" variant="outline-dark" style={{ marginRight: 10 }}>Post</Button>
-                            <Button variant="light" onClick={() => {
-                                setUserSelf(false);
-                                firebase.doSignOut()
-                            }}>
-                                Sign Out
-                            </Button>
-                        </div>
-
-                        :
-                        <div>
-                            <Button variant="outline-dark" href="/login" style={{ marginRight: 10 }}>
-                                log in
-                                </Button>
-
-                            <Button variant="light" href="/signup">
-                                sign up
-                                </Button>
-                        </div>
-                    }
-
-                </Nav>
-            </Navbar>
+            <NavBar />
             {userLoading ?
                 <Container className={styles.paddingTop}>
                     <Spinner style={{ marginTop: 30, marginLeft: 30 }} animation="border" />

@@ -100,81 +100,69 @@ const SignupPage: React.FC = () => {
     }
 
     return (
-        <div>
-            <Navbar bg="light" variant="light">
-                <Navbar.Brand href="/">
-                    {' '}
-                            ioyou
-                    </Navbar.Brand>
-                <Nav className='ml-auto'></Nav>
-                <Button variant="outline-dark">
-                    log in
-                        </Button>
-            </Navbar>
-            <Container className={styles.paddingTop} style={{ paddingBottom: 10 }}>
-                <Form validated={validated} onSubmit={handleSubmit}>
+        <Container style={{ paddingBottom: 10 }}>
+            <Form validated={validated} onSubmit={handleSubmit}>
 
-                    <Form.Group controlId="formBasicName">
-                        <Form.Label>Name</Form.Label>
-                        <Form.Control required type="text" placeholder="Jane Doe" onChange={handleChangeName} value={name} />
-                        <Form.Control.Feedback type="invalid">
-                            Please provide a name.
+                <Form.Group controlId="formBasicName">
+                    <Form.Label>Name</Form.Label>
+                    <Form.Control required type="text" placeholder="Jane Doe" onChange={handleChangeName} value={name} />
+                    <Form.Control.Feedback type="invalid">
+                        Please provide a name.
                         </Form.Control.Feedback>
-                    </Form.Group>
+                </Form.Group>
 
-                    <Form.Group controlId="formBasicName">
-                        <Form.Label>Username</Form.Label>
-                        <Form.Control required type="text" placeholder="username" onChange={handleChangeUsername} value={username} />
-                        <Form.Text className="text-danger">
-                            {usernameErr}
-                        </Form.Text>
-                    </Form.Group>
+                <Form.Group controlId="formBasicName">
+                    <Form.Label>Username</Form.Label>
+                    <Form.Control required type="text" placeholder="username" onChange={handleChangeUsername} value={username} />
+                    <Form.Text className="text-danger">
+                        {usernameErr}
+                    </Form.Text>
+                </Form.Group>
 
-                    <Form.Group controlId="formBasicEmail">
-                        <Form.Label>Email address</Form.Label>
-                        <Form.Control required type="email" placeholder="jdoe@email.com" onChange={handleChangeEmail} value={email} />
-                        <Form.Control.Feedback type="invalid">
-                            Please provide an email.
+                <Form.Group controlId="formBasicEmail">
+                    <Form.Label>Email address</Form.Label>
+                    <Form.Control required type="email" placeholder="jdoe@email.com" onChange={handleChangeEmail} value={email} />
+                    <Form.Control.Feedback type="invalid">
+                        Please provide an email.
                         </Form.Control.Feedback>
-                    </Form.Group>
+                </Form.Group>
 
-                    <Form.Group controlId="formBasicPassword">
-                        <Form.Label>Password</Form.Label>
-                        <Form.Control required type="password" placeholder="Password" onChange={handleChangePassword} value={password} />
-                        {passCheck ?
-                            <Form.Text className="text-success">
-                                Looks good!
+                <Form.Group controlId="formBasicPassword">
+                    <Form.Label>Password</Form.Label>
+                    <Form.Control required type="password" placeholder="Password" onChange={handleChangePassword} value={password} />
+                    {passCheck ?
+                        <Form.Text className="text-success">
+                            Looks good!
                             </Form.Text>
-                            :
-                            <Form.Text className="text-danger">
-                                At least 8 characters and contain an uppercase letter, lowercase letter, number, and special character.
-                            </Form.Text>
-                        }
-                    </Form.Group>
-                    <Form.Group controlId="formBasicCheckbox">
-                        <Form.Check required type="checkbox" label="I agree to the terms and conditions." />
-                    </Form.Group>
-
-                    {handling ?
-                        <Button variant="primary" disabled>
-                            <Spinner
-                                as="span"
-                                animation="border"
-                                size="sm"
-                                role="status"
-                                aria-hidden="true"
-                            />
-                        </Button>
                         :
-                        <Button variant="primary" type="submit">
-                            Submit
-                    </Button>
+                        <Form.Text className="text-danger">
+                            At least 8 characters and contain an uppercase letter, lowercase letter, number, and special character.
+                            </Form.Text>
                     }
+                </Form.Group>
+                <Form.Group controlId="formBasicCheckbox">
+                    <Form.Check required type="checkbox" label="I agree to the terms and conditions." />
+                </Form.Group>
 
-                </Form>
-                <p className="text-danger">{err}</p>
-            </Container>
-        </div>
+                {handling ?
+                    <Button variant="primary" disabled>
+                        <Spinner
+                            as="span"
+                            animation="border"
+                            size="sm"
+                            role="status"
+                            aria-hidden="true"
+                        />
+                    </Button>
+                    :
+                    <Button variant="primary" type="submit">
+                        Submit
+                    </Button>
+                }
+
+            </Form>
+            <p className="text-danger">{err}</p>
+        </Container>
     )
 }
 

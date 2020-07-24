@@ -9,9 +9,6 @@ import {
 import { ROUTES } from '../../constants'
 import { HomePage } from '../Home'
 import { ProfilePage } from '../Profile'
-import { SignupPage } from '../Signup'
-import { LoginPage } from '../Login'
-import { PostPage } from '../Post'
 import { useFirebase } from '../Firebase'
 import { useSession, SessionContext } from '../Session/'
 import { QuestionPage } from '../Question'
@@ -27,15 +24,6 @@ const MainApp: React.FC = () => {
             <Switch>
                 <Route exact path={ROUTES.ROOT}>
                     <HomePage />
-                </Route>
-                <Route path={ROUTES.SIGNUP}>
-                    <SignupPage />
-                </Route>
-                <Route path={ROUTES.LOGIN}>
-                    <LoginPage />
-                </Route>
-                <Route path={ROUTES.POST}>
-                    <PostPage />
                 </Route>
                 <Route path={ROUTES.USERNAME}>
                     <ProfilePage />

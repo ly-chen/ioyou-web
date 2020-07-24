@@ -4,6 +4,7 @@ import { functions, auth, firestore } from 'firebase'
 import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card, Tabs, Tab, DropdownButton, Dropdown, Modal, InputGroup, Form } from 'react-bootstrap'
 import { useSession } from '../Session'
 import styles from './Home.module.css'
+import { NavBar } from '../../constants'
 
 const HomePage: React.FC = () => {
     const firebase = useFirebase()
@@ -494,44 +495,7 @@ const HomePage: React.FC = () => {
 
     return (
         <div>
-            <Navbar bg="light" variant="light">
-                <Navbar.Brand href="/">
-                    {' '}
-                            ioyou
-                    </Navbar.Brand>
-                <Nav className="ml-auto">
-                    {session.auth ?
-                        <div>
-                            <Button variant="light" onClick={async () => {
-                                const user = await firebase.db.collection('users').doc(session?.auth?.uid).get()
-                                const username = user?.data()?.username
-                                window.location.href = `/user/${username}`
-                            }} style={{ marginRight: 10 }}>
-                                Profile
-                            </Button>
-                            <Button href="/new" variant="outline-dark" style={{ marginRight: 10 }}>Post</Button>
-                            <Button variant="light" onClick={() => {
-                                firebase.doSignOut()
-                                window.location.reload()
-                            }}>
-                                Sign Out
-                            </Button>
-                        </div>
-
-                        :
-                        <div>
-                            <Button variant="outline-dark" href="/login" style={{ marginRight: 10 }}>
-                                log in
-                                </Button>
-
-                            <Button variant="light" href="/signup">
-                                sign up
-                                </Button>
-                        </div>
-                    }
-
-                </Nav>
-            </Navbar>
+            <NavBar />
             <Modal show={reportModalShow} onHide={() => {
                 setReportModalShow(false)
                 setReportDone(false)

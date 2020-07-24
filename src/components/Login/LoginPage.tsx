@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Form, Spinner, FormControl } from 'react-bootstrap'
-import { useFirebase, Firebase } from '../Firebase'
+import React, { useState, useEffect, PropsWithChildren } from 'react';
+import { Button, Modal, Container, Form, Spinner } from 'react-bootstrap'
+import { useFirebase } from '../Firebase'
 import { useSession } from '../Session'
 import styles from './Login.module.css'
 
-const LoginPage: React.FC = () => {
+const LoginPage: React.FC<any> = () => {
     const firebase = useFirebase()
     const session = useSession()
 
@@ -15,11 +15,6 @@ const LoginPage: React.FC = () => {
 
     const [handling, setHandling] = useState<boolean>(false)
 
-    useEffect(() => {
-        if (session.auth && validated) {
-            window.location.href = '/'
-        }
-    }, [session, firebase])
 
     const handleSubmit = async (event: any) => {
         event.preventDefault();
@@ -35,7 +30,8 @@ const LoginPage: React.FC = () => {
             try {
                 await firebase.doSignInWithEmailAndPassword(email, password)
                 setValidated(true);
-                window.location.href = "/"
+                setHandling(false);
+                window.location.reload()
             } catch (e) {
                 console.log(e);
                 setErr(e.message);
@@ -54,49 +50,36 @@ const LoginPage: React.FC = () => {
     }
 
     return (
-        <div>
-            <Navbar bg="light" variant="light">
-                <Navbar.Brand href="/">
-                    {' '}
-                            ioyou
-                    </Navbar.Brand>
-                <Nav className='ml-auto'>
-                    <Button variant="outline-dark" href="/signup">
-                        sign up
+        <Container>
+            <Form validated={validated} onSubmit={handleSubmit}>
+                <Form.Group controlId="formBasicEmail">
+                    <Form.Label>Email address</Form.Label>
+                    <Form.Control required type="email" placeholder="Enter email" onChange={handleChangeEmail} value={email} />
+                </Form.Group>
+                <Form.Group controlId="formBasicPassword">
+                    <Form.Label>Password</Form.Label>
+                    <Form.Control required type="password" placeholder="Password" onChange={handleChangePassword} value={password} />
+                </Form.Group>
+                {handling ?
+                    <Button variant="primary" disabled>
+                        <Spinner
+                            as="span"
+                            animation="border"
+                            size="sm"
+                            role="status"
+                            aria-hidden="true"
+                        />
                     </Button>
-                </Nav>
-
-            </Navbar>
-            <Container className={styles.paddingTop}>
-                <Form validated={validated} onSubmit={handleSubmit}>
-                    <Form.Group controlId="formBasicEmail">
-                        <Form.Label>Email address</Form.Label>
-                        <Form.Control required type="email" placeholder="Enter email" onChange={handleChangeEmail} value={email} />
-                    </Form.Group>
-                    <Form.Group controlId="formBasicPassword">
-                        <Form.Label>Password</Form.Label>
-                        <Form.Control required type="password" placeholder="Password" onChange={handleChangePassword} value={password} />
-                    </Form.Group>
-                    {handling ?
-                        <Button variant="primary" disabled>
-                            <Spinner
-                                as="span"
-                                animation="border"
-                                size="sm"
-                                role="status"
-                                aria-hidden="true"
-                            />
+                    :
+                    <Button variant="primary" type="submit" style={{ marginTop: 10 }}>
+                        Log in
                         </Button>
-                        :
-                        <Button variant="primary" type="submit" style={{ marginTop: 10 }}>
-                            Log in
-                        </Button>
-                    }
+                }
 
-                </Form>
-                <p className="text-danger">{err}</p>
-            </Container>
-        </div>
+            </Form>
+            <p className="text-danger">{err}</p>
+        </Container>
+
     )
 }
 

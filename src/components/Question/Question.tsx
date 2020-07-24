@@ -5,6 +5,7 @@ import { functions, auth, firestore } from 'firebase'
 import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card, Form, Modal, InputGroup, FormControl } from 'react-bootstrap'
 import { useSession } from '../Session'
 import styles from './Question.module.css'
+import { NavBar } from '../../constants'
 
 const QuestionPage: React.FC = (props) => {
     const firebase = useFirebase()
@@ -473,42 +474,7 @@ const QuestionPage: React.FC = (props) => {
 
     return (
         <div>
-            <Navbar bg="light" variant="light">
-                <Navbar.Brand href="/">
-                    {' '}
-                            ioyou
-                    </Navbar.Brand>
-                <Nav className="ml-auto">
-                    {session.auth ?
-                        <div>
-                            <Button variant="light" onClick={async () => {
-                                const user = await firebase.db.collection('users').doc(session?.auth?.uid).get()
-                                const username = user?.data()?.username
-                                window.location.href = `/user/${username}`
-                            }} style={{ marginRight: 10 }}>
-                                Profile
-                            </Button>
-                            <Button href="/new" variant="outline-dark" style={{ marginRight: 10 }}>Post</Button>
-                            <Button variant="outline-dark" onClick={() => {
-                                window.location.reload()
-                                firebase.doSignOut()
-                            }}>
-                                Sign Out
-                            </Button>
-                        </div>
-
-                        :
-                        <div>
-                            <Button variant="outline-dark" href="/login" style={{ marginRight: 10 }}>
-                                log in
-                                </Button>
-
-                            <Button variant="light" href="/signup">
-                                sign up
-                                </Button>
-                        </div>}
-                </Nav>
-            </Navbar>
+            <NavBar />
                 <Modal show={awardModalShow} onHide={() => { setAwardModalShow(false) }}>
                     <Modal.Header closeButton>
                         <Modal.Title>Award @{commentAuthorName}!</Modal.Title>
