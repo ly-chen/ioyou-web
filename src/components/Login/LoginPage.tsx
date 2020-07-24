@@ -4,7 +4,7 @@ import { useFirebase } from '../Firebase'
 import { useSession } from '../Session'
 import styles from './Login.module.css'
 
-const LoginPage: React.FC<any> = () => {
+const LoginPage: React.FC<any> = ({ setLoginModalShow }) => {
     const firebase = useFirebase()
     const session = useSession()
 
@@ -31,7 +31,7 @@ const LoginPage: React.FC<any> = () => {
                 await firebase.doSignInWithEmailAndPassword(email, password)
                 setValidated(true);
                 setHandling(false);
-                window.location.reload()
+                setLoginModalShow(false)
             } catch (e) {
                 console.log(e);
                 setErr(e.message);

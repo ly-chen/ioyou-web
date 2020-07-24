@@ -7,6 +7,7 @@ import { useSession } from '../Session'
 import styles from './Profile.module.css'
 import { StringLocale } from 'yup';
 import { NavBar } from '../../constants'
+import { FeedView } from '../../constants'
 
 const ProfilePage: React.FC = () => {
     const { username } = useParams()
@@ -416,169 +417,6 @@ const ProfilePage: React.FC = () => {
         )
     }
 
-    const handleVote = (upvoteTrue: boolean, object: any) => {
-        var collect = 'posts'
-        var upvoteList: string[] = []
-        var downvoteList: string[] = []
-        var upvoteIndex = -1
-        var downvoteIndex = -1
-
-        if (userSelfDoc.upvoted) {
-            upvoteList = upvoted
-            upvoteIndex = upvoteList.indexOf(object.id)
-        }
-        if (userSelfDoc.downvoted) {
-            downvoteList = downvoted
-            downvoteIndex = downvoteList.indexOf(object.id)
-        }
-
-
-        var upvotes: number;
-        if (object.data.upvotes) {
-            upvotes = object.data.upvotes
-        } else {
-            upvotes = 0
-        }
-
-        if (upvoteTrue) {
-
-            if (upvoteIndex == -1) {
-                if (downvoteIndex != -1) {
-                    downvoteList.splice(downvoteIndex, 1)
-                    firebase.db.collection('users').doc(session.auth?.uid).update({ downvoted: downvoteList })
-                    upvotes = upvotes + 1
-                }
-                upvoteList = [...upvoteList, object.id]
-                console.log('upvoteList after adding = ', upvoteList)
-                upvotes = upvotes + 1
-
-            } else {
-                upvoteList.splice(upvoteIndex, 1)
-                console.log('upvoteList after splice = ', upvoteList)
-                upvotes = upvotes - 1
-            }
-            firebase.db.collection('users').doc(session.auth?.uid).update({ upvoted: upvoteList })
-
-            firebase.db.collection(collect).doc(object.id).update({ upvotes: upvotes })
-            object.data.upvotes = upvotes;
-        } else {
-            if (downvoteIndex == -1) {
-                if (upvoteIndex != -1) {
-                    upvoteList.splice(upvoteIndex, 1)
-                    firebase.db.collection('users').doc(session.auth?.uid).update({ upvoted: upvoteList })
-                    upvotes = upvotes - 1
-                }
-                downvoteList = [...downvoteList, object.id]
-                console.log('downvoteList after adding = ', downvoteList)
-                upvotes = upvotes - 1
-            } else {
-                downvoteList.splice(downvoteIndex, 1)
-                console.log('downvoteList after splice = ', downvoteList)
-                upvotes = upvotes + 1
-            }
-
-
-            firebase.db.collection('users').doc(session.auth?.uid).update({ downvoted: downvoteList })
-            firebase.db.collection(collect).doc(object.id).update({ upvotes: upvotes })
-            object.data.upvotes = upvotes;
-        }
-
-
-        if (upvoteList) {
-            setUpvoted(upvoteList)
-        }
-        if (downvoteList) {
-            setDownvoted(downvoteList)
-        }
-    }
-
-    //a feed object
-    const feedCard = (object: { id: string; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string, upvotes: number }; numComments: number }) => {
-
-        var time = nowSeconds - object.data.timestamp.seconds;
-        var message = ''
-        if (time < 120) {
-            message = 'about a minute ago'
-        } else if (time < 3600) {
-            message = `${Math.floor(time / 60)} minutes ago`
-        } else if (time < 86400) {
-            let curTime = Math.floor(time / 3600)
-            if (curTime == 1) {
-                message = 'about an hour ago'
-            } else {
-                message = `${curTime} hours ago`
-            }
-        } else {
-            let curTime = Math.floor(time / 86400)
-            if (curTime == 1) {
-                message = 'yesterday'
-            } else {
-                message = `${curTime} days ago`
-            }
-        }
-
-        const channelView = () => {
-            const subjectObjects = object.data.channels?.map((d) => <p key={d}>{(object.data.channels.indexOf(d) == 0) ? `#${d}` : `, #${d}`}</p>)
-            return (
-                <div>
-                    <Row style={{ marginLeft: 1 }}>{subjectObjects}</Row>
-
-                </div>
-            )
-        }
-
-        return (
-
-            <Card style={{ marginBottom: 20 }}>
-                <Card.Body>
-                    <Row>
-                        <Col>
-                            <a href={`/post/${object.id}`}>
-                                <Card.Title>{object.data.title}</Card.Title>
-                            </a>
-                            <Card.Subtitle>{channelView()}</Card.Subtitle>
-                            <Card.Text className={styles.fontLess}> {object.data.desc}</Card.Text>
-                        </Col>
-                        <Col xs={3} sm={2} style={{ textAlign: 'center' }}>
-                            <Button disabled={!session.auth} size="sm" active={upvoted.includes(object.id)} variant="outline-primary" onClick={() => {
-                                handleVote(true, object)
-                                setChanged(!changed)
-                            }}>
-                                ▲
-                            </Button>
-                            <p>{object.data.upvotes ?
-                                object.data.upvotes
-                                :
-                                0
-                            }
-                            </p>
-                            <Button disabled={!session.auth} size="sm" active={downvoted.includes(object.id)} variant="outline-danger" onClick={() => {
-                                handleVote(false, object)
-                                setChanged(!changed)
-                            }}>▼</Button>
-                        </Col>
-                    </Row>
-                    <Card.Text className={styles.fontLess}>{object.numComments == 1 ?
-                        <a href={`/post/${object.id}`}>{object.numComments} comment</a>
-                        :
-                        <a href={`/post/${object.id}`}>{object.numComments} comments</a>
-                    }
-
-                        {' '} - posted by <a href={`/user/${object.data.authorName}`}>{`@${object.data.authorName}`}</a> - {message}</Card.Text>
-                </Card.Body>
-            </Card>
-
-            //
-        )
-    }
-
-    //list of feed objects
-    const feedView = (feedList: { id: string; data: { title: string; desc: string; timestamp: { seconds: number; nanoseconds: number }; author: string; channels: string[]; authorName: string, upvotes: number }; numComments: number }[]) => {
-        const feedItems = feedList.map((object: { id: string; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string, upvotes: number }; numComments: number }) => <div key={object.id} >{feedCard(object)}</div>
-        )
-        return feedItems
-    }
-
 
     return (
         <div>
@@ -646,7 +484,7 @@ const ProfilePage: React.FC = () => {
                             ?
                             <div>
 
-                                {feedView(history)}
+                                <FeedView feedList={history} nowSeconds={nowSeconds} userDoc={userSelfDoc} upvoted={upvoted} downvoted={downvoted} setUpvoted={setUpvoted} setDownvoted={setDownvoted} setChanged={setChanged} changed={changed} />
                                 <Button variant='light' onClick={() => { getPosts(sort, userid, lastPost, history) }}>Load more</Button>
                             </div>
                             :

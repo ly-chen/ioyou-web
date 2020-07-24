@@ -27,7 +27,7 @@ const NavBar: React.FC = () => {
             }}>
                 <Modal.Header>Log in</Modal.Header>
                 <Modal.Body>
-                    <LoginPage />
+                    <LoginPage setLoginModalShow={setLoginModalShow} />
                 </Modal.Body>
             </Modal>
             <Modal show={signupModalShow} onHide={() => {
@@ -43,7 +43,7 @@ const NavBar: React.FC = () => {
             }}>
                 <Modal.Header closeButton>New Post</Modal.Header>
                 <Modal.Body>
-                    <PostPage />
+                    <PostPage setPostModalShow={setPostModalShow} />
                 </Modal.Body>
             </Modal>
             <Nav className="ml-auto">

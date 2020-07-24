@@ -13,6 +13,30 @@ exports.createPost = functions.https.onCall(async (data, context) => {
     await admin.firestore().collection('posts').doc().set(data);
 })
 
+exports.deletePost = functions.https.onCall(async (data, context) => {
+    if (data.awarded == true || data.awarded > 0) {
+        console.log('error; should not be able to trigger delete func')
+        return
+    } else {
+        if (data.numReplies > 0) {
+
+            if (data.collect === 'posts') {
+                await admin.firestore().collection(data.collect).doc(data.id).update({ desc: "[deleted]", author: "", authorName: "[deleted]", awarded: true, });
+            } else {
+                await admin.firestore().collection(data.collect).doc(data.id).update({ comment: '[deleted]', author: "", authorName: "[deleted]", selected: -1 })
+            }
+        } else {
+            await admin.firestore().collection(data.collect).doc(data.id).delete();
+        }
+
+        if (data.collect === 'posts') {
+            await admin.firestore().collection('users').doc(context.auth?.uid).update({ credits: admin.firestore.FieldValue.increment(data.bounty) })
+        }
+    }
+})
+
+
+
 exports.createComment = functions.https.onCall(async (data, context) => {
     await admin.firestore().collection('comments').doc().set(data);
 })

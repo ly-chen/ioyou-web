@@ -1,0 +1,30 @@
+.paddingTop {
+    padding-top: 4rem;
+    padding-bottom: 5rem;
+}
+
+.centerItems {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.fontLess {
+    font-weight: normal;
+}
+
+.opaqueLess {
+    opacity: 0.5
+}
+
+.refresh {
+    padding-left: 1rem;
+}
+
+.borderLeft {
+    border-left: solid lightgray;
+    border-left-width: 0.5px;
+    border-top: solid lightgray;
+    border-top-width: 0.5px;
+    border-top-left-radius: 3pt;
+}

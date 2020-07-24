@@ -5,6 +5,7 @@ import { Navbar, Nav, Button, ButtonGroup, Container, Row, Col, Spinner, Jumbotr
 import { useSession } from '../Session'
 import styles from './Home.module.css'
 import { NavBar } from '../../constants'
+import { FeedView } from '../../constants'
 
 const HomePage: React.FC = () => {
     const firebase = useFirebase()
@@ -38,14 +39,6 @@ const HomePage: React.FC = () => {
     const [upvoted, setUpvoted] = useState<string[]>([])
     const [downvoted, setDownvoted] = useState<string[]>([])
     const [changed, setChanged] = useState<boolean>(false);
-
-    const [reportMessage, setReportMessage] = useState<string>('')
-    const [reportAuthorName, setReportAuthorName] = useState<string>('')
-    const [reportID, setReportID] = useState<string>('')
-    const [reportHandling, setReportHandling] = useState<boolean>(false)
-    const [reportDone, setReportDone] = useState<boolean>(false);
-
-    const [reportModalShow, setReportModalShow] = useState<boolean>(false)
 
     const getChannels = async () => {
         try {
@@ -186,210 +179,6 @@ const HomePage: React.FC = () => {
         loadPosts()
     }, [session, firebase])
 
-    const handleReportChange = (event: any) => {
-        setReportMessage(event.target.value);
-    }
-
-
-    //a feed object
-    const feedCard = (object: { id: string; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string; upvotes: number; bounty: number; bulletin: boolean }; numComments: number }) => {
-
-        var time = nowSeconds - object.data.timestamp.seconds;
-        var message = ''
-        if (time < 120) {
-            message = 'about a minute ago'
-        } else if (time < 3600) {
-            message = `${Math.floor(time / 60)} minutes ago`
-        } else if (time < 86400) {
-            let curTime = Math.floor(time / 3600)
-            if (curTime == 1) {
-                message = 'about an hour ago'
-            } else {
-                message = `${curTime} hours ago`
-            }
-        } else {
-            let curTime = Math.floor(time / 86400)
-            if (curTime == 1) {
-                message = 'yesterday'
-            } else {
-                message = `${curTime} days ago`
-            }
-        }
-
-        const channelView = () => {
-            const subjectObjects = object.data.channels?.map((d) => <p key={d}>{(object.data.channels.indexOf(d) == 0) ? `#${d}` : `, #${d}`}</p>)
-            return (
-                <div>
-                    <Row style={{ marginLeft: 1 }}>{subjectObjects}</Row>
-
-                </div>
-            )
-        }
-
-        const handleVote = (upvoteTrue: boolean) => {
-            var upvoteList: string[] = []
-            var downvoteList: string[] = []
-            var upvoteIndex = -1
-            var downvoteIndex = -1
-            console.log('userDoc = ', userDoc)
-            if (userDoc.upvoted) {
-                upvoteList = upvoted
-                upvoteIndex = upvoteList.indexOf(object.id)
-            }
-            if (userDoc.downvoted) {
-                downvoteList = downvoted
-                downvoteIndex = downvoteList.indexOf(object.id)
-            }
-
-            console.log('upvoteIndex = ', upvoteIndex)
-
-            console.log('upvoteList = ', upvoteList)
-
-            console.log('downvoteIndex = ', downvoteIndex)
-
-            console.log('downvoteList = ', downvoteList)
-
-            var upvotes: number;
-            if (object.data.upvotes) {
-                upvotes = object.data.upvotes
-            } else {
-                upvotes = 0
-            }
-
-            if (upvoteTrue) {
-
-                if (upvoteIndex == -1) {
-                    if (downvoteIndex != -1) {
-                        downvoteList.splice(downvoteIndex, 1)
-                        firebase.db.collection('users').doc(session.auth?.uid).update({ downvoted: downvoteList })
-                        upvotes = upvotes + 1
-                    }
-                    upvoteList = [...upvoteList, object.id]
-                    console.log('upvoteList after adding = ', upvoteList)
-                    upvotes = upvotes + 1
-
-                } else {
-                    upvoteList.splice(upvoteIndex, 1)
-                    console.log('upvoteList after splice = ', upvoteList)
-                    upvotes = upvotes - 1
-                }
-                firebase.db.collection('users').doc(session.auth?.uid).update({ upvoted: upvoteList })
-
-                firebase.db.collection('posts').doc(object.id).update({ upvotes: upvotes })
-                object.data.upvotes = upvotes;
-            } else {
-                if (downvoteIndex == -1) {
-                    if (upvoteIndex != -1) {
-                        upvoteList.splice(upvoteIndex, 1)
-                        firebase.db.collection('users').doc(session.auth?.uid).update({ upvoted: upvoteList })
-                        upvotes = upvotes - 1
-                    }
-                    downvoteList = [...downvoteList, object.id]
-                    console.log('downvoteList after adding = ', downvoteList)
-                    upvotes = upvotes - 1
-                } else {
-                    downvoteList.splice(downvoteIndex, 1)
-                    console.log('downvoteList after splice = ', downvoteList)
-                    upvotes = upvotes + 1
-                }
-
-
-                firebase.db.collection('users').doc(session.auth?.uid).update({ downvoted: downvoteList })
-                firebase.db.collection('posts').doc(object.id).update({ upvotes: upvotes })
-                object.data.upvotes = upvotes;
-            }
-
-
-            if (upvoteList) {
-                setUpvoted(upvoteList)
-            }
-            if (downvoteList) {
-                setDownvoted(downvoteList)
-            }
-        }
-
-        return (
-
-            <Card style={{ marginBottom: 20 }}>
-                <Card.Body>
-
-                    {object.data.bulletin ?
-                        <div>
-                            <a href={`/post/${object.id}`}>
-                                <Card.Title>{object.data.title}</Card.Title>
-                            </a>
-                            <Card.Subtitle>{channelView()}</Card.Subtitle>
-                        </div>
-                        :
-                        <Row>
-                            <Col>
-                                <a href={`/post/${object.id}`}>
-                                    <Card.Title>{object.data.title}</Card.Title>
-                                </a>
-                                <Card.Subtitle>{channelView()}</Card.Subtitle>
-
-                            </Col>
-                            <Col xs={3} md={2} style={{ textAlign: 'center' }}>
-                                <Card bg="light" >
-                                    {object.data.bounty <= 0 ?
-                                        <Card.Title style={{ paddingTop: 10 }}>Claimed</Card.Title>
-                                        :
-                                        <Card.Title style={{ paddingTop: 10 }}>{object.data.bounty} cr.</Card.Title>
-                                    }
-
-                                </Card>
-
-                            </Col>
-                        </Row>
-                    }
-
-                    <Card.Text className={styles.fontLess}> {object.data.desc}</Card.Text>
-
-
-                    <Card.Text className={styles.fontLess} style={{ paddingTop: 10 }}>
-                        <Button disabled={!session.auth} size="sm" active={upvoted.includes(object.id)} variant="outline-primary" onClick={() => {
-                            handleVote(true)
-                            setChanged(!changed)
-                        }}>
-                            ▲
-                            </Button>
-                        {' '}
-                        &nbsp;
-                        {object.data.upvotes ?
-                            object.data.upvotes
-                            :
-                            0
-                        }
-                        {' '}
-                        &nbsp;
-                        <Button disabled={!session.auth} size="sm" active={downvoted.includes(object.id)} variant="outline-danger" onClick={() => {
-                            handleVote(false)
-                            setChanged(!changed)
-                        }}>▼</Button>
-                        {' '}
-                        &nbsp;
-                        {object.numComments == 1 ?
-                            <a href={`/post/${object.id}`}>{object.numComments} comment</a>
-                            :
-                            <a href={`/post/${object.id}`}>{object.numComments} comments</a>
-                        }
-
-                        {' '} - posted by <a href={`/user/${object.data.authorName}`}>{`@${object.data.authorName}`}</a> - {message}
-                        {' - '}
-                        &nbsp;
-                        <Button disabled={!session.auth} size="sm" variant='outline-danger' onClick={() => {
-                            setReportAuthorName(object.data.authorName)
-                            setReportID(object.id)
-                            setReportModalShow(true)
-                        }}>
-                            ⚐
-                        </Button>
-                    </Card.Text>
-                </Card.Body>
-            </Card >
-            //
-        )
-    }
 
     //loading animation while retrieving feed
     const feedLoadingView = () => {
@@ -436,12 +225,6 @@ const HomePage: React.FC = () => {
         )
     }
 
-    //list of feed objects
-    const feedView = (feedList: { id: string; data: { title: string; desc: string; timestamp: { seconds: number; nanoseconds: number }; author: string; channels: string[]; authorName: string; upvotes: number; bounty: number; bulletin: boolean }; numComments: number }[]) => {
-        const feedItems = feedList.map((object: { id: string; data: { title: string; desc: string; timestamp: { seconds: number, nanoseconds: number }; author: string; channels: Array<string>; authorName: string; upvotes: number; bounty: number; bulletin: boolean }; numComments: number }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
-        )
-        return feedItems
-    }
 
     const sortButton = (category: string, categoryFeed: any[], feedSort: string, setLastFeed: any, setCategoryFeed: any, setFeedLoading: any, setFeedSort: any) => {
         const handleSort = async (sortType: string) => {
@@ -496,48 +279,6 @@ const HomePage: React.FC = () => {
     return (
         <div>
             <NavBar />
-            <Modal show={reportModalShow} onHide={() => {
-                setReportModalShow(false)
-                setReportDone(false)
-                setReportMessage('')
-            }}>
-                <Modal.Header closeButton>
-                    <Modal.Title>Report @{reportAuthorName}</Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    Let us know if this user is violating community agreements as outlined in our terms of service. Thanks!
-                    </Modal.Body>
-                <Modal.Footer>
-                    <InputGroup>
-                        <Form.Control as="textarea" placeholder="What's the reason for reporting this user?" rows={3} onChange={handleReportChange} value={reportMessage} />
-                    </InputGroup>
-                    {reportHandling ?
-                        <Button disabled variant='danger'>
-                            <Spinner
-                                as="span"
-                                animation="border"
-                                size="sm"
-                                role="status"
-                                aria-hidden="true"
-                            />
-                        </Button>
-                        :
-                        reportDone ?
-                            <Button disabled variant='danger'>Thanks! You can close this window.</Button>
-
-                            :
-                            <Button variant='danger' onClick={async () => {
-                                setReportHandling(true);
-                                await functions().httpsCallable('createReport')({ post: reportID, reportMessage: reportMessage, submittedBy: session.auth?.uid, timestamp: firestore.Timestamp.now() }).then(() => {
-                                    setReportHandling(false);
-                                    setReportDone(true);
-                                })
-                            }}>Report
-                        </Button>
-                    }
-
-                </Modal.Footer>
-            </Modal>
             <Container className={styles.paddingTop}>
                 <Row>
                     <Col>
@@ -554,7 +295,7 @@ const HomePage: React.FC = () => {
 
                             allFeed[0] ?
                                 <div>
-                                    {feedView(allFeed)}
+                                    <FeedView feedList={allFeed} nowSeconds={nowSeconds} userDoc={userDoc} upvoted={upvoted} downvoted={downvoted} setUpvoted={setUpvoted} setDownvoted={setDownvoted} setChanged={setChanged} changed={changed} />
                                     {allLoadingDone ?
                                         <Button variant='light' onClick={() => {
                                             setAllLoadingDone(false)
@@ -591,7 +332,7 @@ const HomePage: React.FC = () => {
                         {
                             homeFeed[0] ?
                                 <div>
-                                    {feedView(homeFeed)}
+                                    <FeedView feedList={homeFeed} nowSeconds={nowSeconds} userDoc={userDoc} upvoted={upvoted} downvoted={downvoted} setUpvoted={setUpvoted} setDownvoted={setDownvoted} setChanged={setChanged} changed={changed} />
                                     {homeLoadingDone ?
                                         <Button variant='light' onClick={() => {
                                             setHomeLoadingDone(false)
@@ -634,7 +375,7 @@ const HomePage: React.FC = () => {
                         {
                             academic[0] ?
                                 <div>
-                                    {feedView(academic)}
+                                    <FeedView feedList={academic} nowSeconds={nowSeconds} userDoc={userDoc} upvoted={upvoted} downvoted={downvoted} setUpvoted={setUpvoted} setDownvoted={setDownvoted} setChanged={setChanged} changed={changed} />
                                     {acadLoadingDone ?
                                         <Button variant='light' onClick={() => {
                                             setAcadLoadingDone(false)
@@ -677,7 +418,7 @@ const HomePage: React.FC = () => {
                         {
                             bulletin[0] ?
                                 <div>
-                                    {feedView(bulletin)}
+                                    <FeedView feedList={bulletin} nowSeconds={nowSeconds} userDoc={userDoc} upvoted={upvoted} downvoted={downvoted} setUpvoted={setUpvoted} setDownvoted={setDownvoted} setChanged={setChanged} changed={changed} />
                                     {bulLoadingDone ?
                                         <Button variant='light' onClick={() => {
                                             setBulLoadingDone(false)

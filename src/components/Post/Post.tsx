@@ -6,7 +6,7 @@ import { useSession } from '../Session'
 import styles from './Post.module.css'
 import { NavBar } from '../../constants'
 
-const PostPage: React.FC = () => {
+const PostPage: React.FC<any> = ({ setPostModalShow }) => {
     const firebase = useFirebase()
     const session = useSession()
 
@@ -156,9 +156,10 @@ const PostPage: React.FC = () => {
             }
         }
 
-        await functions().httpsCallable('createPost')(newPost)
-        await firebase.db.collection('users').doc(session?.auth?.uid).update({ credits: userDoc.credits - bounty })
-        window.location.href = "/"
+        await functions().httpsCallable('createPost')(newPost).then(async () => {
+            await firebase.db.collection('users').doc(session?.auth?.uid).update({ credits: userDoc.credits - bounty })
+            window.location.href = `/user/${userDoc.username}`
+        })
     }
 
 

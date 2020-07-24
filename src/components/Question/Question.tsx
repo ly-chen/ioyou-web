@@ -55,9 +55,17 @@ const QuestionPage: React.FC = (props) => {
 
     const [reportModalShow, setReportModalShow] = useState<boolean>(false)
 
+    const [deleteModalShow, setDeleteModalShow] = useState<boolean>(false)
+
     const [commentAuthorName, setCommentAuthorName] = useState<string>('')
     const [commentAuthor, setCommentAuthor] = useState<string>('')
     const [commentID, setCommentID] = useState<string>('')
+
+    const [deleteCollection, setDeleteCollection] = useState<string>('')
+    const [deleteID, setDeleteID] = useState<string>('')
+    const [numReplies, setNumReplies] = useState<number>(0)
+    const [deleteSelected, setDeleteSelected] = useState<number>(0)
+    const [deleteHandling, setDeleteHandling] = useState<boolean>(false)
 
     const getComments = async (id: string) => {
         try {
@@ -407,6 +415,21 @@ const QuestionPage: React.FC = (props) => {
                     }}>
                         ⚐
                     </Button>
+                    &nbsp;
+                    &nbsp;
+                    {object.data.author == session.auth?.uid && object.data.selected <= 0 ?
+                        <Button variant='danger' onClick={() => { 
+                            let replies = 0;
+                            if (object.replies && object.replies.length > 0) {
+                                replies = object.replies.length
+                            }
+                            setDeleteCollection('comments')
+                            setDeleteID(object.id)
+                            setNumReplies(replies)
+                            setDeleteSelected(object.data.selected)
+                            setDeleteModalShow(true) }}>Delete</Button>
+                    :
+                    ''}
                 </p>
 
 
@@ -518,6 +541,51 @@ const QuestionPage: React.FC = (props) => {
                     </Modal.Footer>
                 </Modal>
 
+                <Modal show={deleteModalShow} onHide={() => {
+                    setDeleteModalShow(false)
+                }}>
+                    <Modal.Header>
+                        <Modal.Title>Delete Post</Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+                        Are you sure you want to delete this post?
+                    </Modal.Body>
+                    <Modal.Footer>
+                        {
+                            deleteHandling ?
+                            <Button disabled variant="danger">
+                                <Spinner
+                                    as="span"
+                                    animation="border"
+                                    size="sm"
+                                    role="status"
+                                    aria-hidden="true"
+                                />
+                            </Button>
+                            :
+                            <Button variant="danger" onClick={() => {
+                                setDeleteHandling(true)
+                                if (deleteCollection === 'posts') {
+                                    functions().httpsCallable('deletePost')({ collect: 'posts', id: postid, numReplies: Number(numComments), awarded: post.awarded, bounty: post.bounty }).then(() => {
+                                        window.location.reload()
+                                    })
+                                } else {
+                                    functions().httpsCallable('deletePost')({ collect: deleteCollection, id: deleteID, numReplies: Number(numReplies), awarded: Number(deleteSelected) }).then(async () => {
+                                        setDeleteModalShow(false)
+                                        setComments(await getComments(postid))
+                                        setNumComments(numComments - 1)
+                                        setCommentsDone(true);
+                                        setDeleteHandling(false);
+                                    })
+                                }
+
+                            }}
+                            >Confirm</Button>
+                        }
+                        
+                    </Modal.Footer>
+                </Modal>
+
             <Modal show={reportModalShow} onHide={() => {
                 setReportModalShow(false)
                 setReportDone(false)
@@ -600,7 +668,8 @@ const QuestionPage: React.FC = (props) => {
                             </Row>
 
 
-                            <Card.Text className={styles.fontLess} style={{ paddingTop: 10 }}>Posted by <a href={`/user/${post?.authorName}`}>{`@${post?.authorName}`}</a> {timeMessage}
+                            <Card.Text className={styles.fontLess} style={{ paddingTop: 10 }}>
+                                Posted by <a href={`/user/${post?.authorName}`}>{`@${post?.authorName}`}</a> {timeMessage}
                             {' - '}
                             &nbsp;
                             <Button disabled={!session.auth} size="sm" variant='outline-danger' onClick={() => {
@@ -610,6 +679,19 @@ const QuestionPage: React.FC = (props) => {
                                 }}>
                                     ⚐
                             </Button>
+                            &nbsp;
+                            &nbsp;
+                            {postSelf && post.awarded == false ?
+                                    <Button variant='danger' onClick={() => {
+                                        setDeleteCollection('posts')
+                                        setDeleteID(postid)
+                                        setNumReplies(numComments)
+                                        setDeleteModalShow(true) }}>Delete Post</Button>
+                                    :
+                                    ''
+                            }
+                            
+
                             </Card.Text>
                         </Card.Body>
                     </Card>
