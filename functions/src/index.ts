@@ -36,6 +36,24 @@ exports.deletePost = functions.https.onCall(async (data, context) => {
 })
 
 
+exports.editPost = functions.https.onCall(async (data, context) => {
+    if (data.fullEdit === false) {
+        if (data.collect === 'posts') {
+            await admin.firestore().collection(data.collect).doc(data.id).update({ edit: data.editText, bounty: data.bounty })
+        } else {
+            await admin.firestore().collection(data.collect).doc(data.id).update({ edit: data.editText })
+        }
+
+    } else {
+        if (data.collect === 'posts') {
+            await admin.firestore().collection('posts').doc(data.id).update({ title: data.title, desc: data.editText, bounty: data.bounty })
+        } else {
+            await admin.firestore().collection('comments').doc(data.id).update({ comment: data.editText })
+        }
+    }
+})
+
+
 
 exports.createComment = functions.https.onCall(async (data, context) => {
     await admin.firestore().collection('comments').doc().set(data);

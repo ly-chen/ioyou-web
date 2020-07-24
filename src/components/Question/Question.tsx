@@ -67,6 +67,21 @@ const QuestionPage: React.FC = (props) => {
     const [deleteSelected, setDeleteSelected] = useState<number>(0)
     const [deleteHandling, setDeleteHandling] = useState<boolean>(false)
 
+    const [editCollection, setEditCollection] = useState<string>('')
+    const [editID, setEditID] = useState<string>('')
+    const [fullEdit, setFullEdit] = useState<boolean>(false);
+    const [editText, setEditText] = useState<string>('')
+    const [readOnlyText, setReadOnlyText] = useState<string>('')
+    const [editHandling, setEditHandling] = useState<boolean>(false);
+    const [editModalShow, setEditModalShow] = useState<boolean>(false);
+
+    const [editTitle, setEditTitle] = useState<string>('')
+    const [editBounty, setEditBounty] = useState<number>(0)
+    const [editBountyCheck, setEditBountyCheck] = useState<boolean>(true);
+
+    const [bountyErr, setBountyErr] = useState<string>('')
+    const [titleErr, setTitleErr] = useState<string>('')
+
     const getComments = async (id: string) => {
         try {
             var docList: any[] = []
@@ -288,7 +303,7 @@ const QuestionPage: React.FC = (props) => {
         event.preventDefault()
         setReplyHandling(true);
         console.log(replyText)
-        const newReply = { comment: replyText, parent: reply, thread: postid, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, authorName: self.username, upvotes: 0, selected: 0 }
+        const newReply = { comment: replyText, parent: reply, thread: postid, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, authorName: self.username, upvotes: 0, selected: 0, edit: '' }
         await functions().httpsCallable('createComment')(newReply).then(async () => {
             setComments(await getComments(postid))
             setNumComments(numComments + 1)
@@ -316,11 +331,38 @@ const QuestionPage: React.FC = (props) => {
         setReportMessage(event.target.value);
     }
 
+    const handleTitleChange = (event: any) => {
+        setEditTitle(event.target.value)
+        if (event.target.value.length <= 0) {
+            setTitleErr('Title Required.')
+        } else {
+            setTitleErr('')
+        }
+    }
+
+    const handleBountyChange = (event: any) => {
+        const check = /^[0-9\b]+$/;
+        setEditBounty(event.target.value);
+        if (event.target.value.match(check) && Number(event.target.value) >= Number(post.bounty)) {
+            setEditBountyCheck(true);
+            setBountyErr('')
+            console.log('passCheck')
+        } else {
+            setEditBountyCheck(false);
+            setBountyErr('Cannot decrease bounty.')
+            console.log('failCheck')
+        }
+    }
+
+    const handleEditChange = (event: any) => {
+        setEditText(event.target.value)
+    }
+
     /*
     <Button variant="primary" size="sm" onClick={() => { functions().httpsCallable('chooseAwardCredits')({ author: object.data.author, bounty: post.bounty, post: postid, comment: object.id }) }}>Award</Button>
     */
     //a feed object
-    const feedCard = (object: { id: string; data: { comment: string; timestamp: { seconds: number, nanoseconds: number }; author: string; authorName: string; parent: string; thread: string; upvotes: number; selected: number }; replies: any[] }) => {
+    const feedCard = (object: { id: string; data: { comment: string; timestamp: { seconds: number, nanoseconds: number }; author: string; authorName: string; parent: string; thread: string; upvotes: number; selected: number; edit: string }; replies: any[] }) => {
         var time = nowSeconds - object.data.timestamp.seconds;
         var message = ''
         if (time < 120) {
@@ -353,6 +395,7 @@ const QuestionPage: React.FC = (props) => {
                         <Col>
                             <p style={{ fontSize: 20 }}>{`@${object.data.authorName}`}</p>
                             <p className={styles.fontLess}> {object.data.comment}</p>
+                            <p className={styles.fontLess}> {object.data.edit}</p>
                         </Col>
                         <Col xs={3} md={2}>
                             <Button variant="success" size="sm">{object.data.selected} cr.</Button>
@@ -364,6 +407,7 @@ const QuestionPage: React.FC = (props) => {
                             <Col>
                                 <p style={{ fontSize: 20 }}>{`@${object.data.authorName}`}</p>
                                 <p className={styles.fontLess}> {object.data.comment}</p>
+                                <p className={styles.fontLess}> {object.data.edit}</p>
                             </Col>
                             <Col xs={3} md={2}>
                                 <Button variant="primary" size="sm" onClick={() => { 
@@ -377,6 +421,7 @@ const QuestionPage: React.FC = (props) => {
                         <div>
                             <p style={{ fontSize: 20 }}>{`@${object.data.authorName}`}</p>
                             <p className={styles.fontLess}> {object.data.comment}</p>
+                            <p className={styles.fontLess}> {object.data.edit}</p>
                         </div>
 
                 }
@@ -408,7 +453,7 @@ const QuestionPage: React.FC = (props) => {
                     {' '} - {message}
                     {' - '}
                     &nbsp;
-                    <Button disabled={!session.auth} size="sm" variant='outline-danger' onClick={() => {
+                    <Button style={{marginTop: 8}} disabled={!session.auth} size="sm" variant='outline-danger' onClick={() => {
                         setReportAuthorName(object.data.authorName)
                         setReportID(object.id)
                         setReportModalShow(true)
@@ -417,8 +462,35 @@ const QuestionPage: React.FC = (props) => {
                     </Button>
                     &nbsp;
                     &nbsp;
-                    {object.data.author == session.auth?.uid && object.data.selected <= 0 ?
-                        <Button variant='danger' onClick={() => { 
+                    {object.data.author == session.auth?.uid ?
+                        <Button size="sm" style={{ marginTop: 8 }} variant='outline-success' onClick={() => {
+                            let replies = 0;
+                            if (object.replies && object.replies.length > 0) {
+                                replies = object.replies.length
+                            }
+                            setEditCollection('comments')
+                            setEditID(object.id)
+                            if (replies == 0 && object.data.selected == 0) {
+                                setFullEdit(true)
+                                setEditText(object.data.comment)
+                            } else {
+                                setFullEdit(false)
+                                setReadOnlyText(object.data.comment)
+                                if (object.data.edit.length > 0) {
+                                    setEditText(object.data.edit)
+                                } else {
+                                    setEditText('EDIT: ')
+                                }
+                            }
+
+                            setEditModalShow(true)
+                        }}>Edit</Button>
+                        :
+                        ''}
+&nbsp;
+                    &nbsp;
+                    {object.data.author == session.auth?.uid && object.data.selected == 0 ?
+                        <Button size="sm" style={{marginTop: 8}} variant='outline-danger' onClick={() => { 
                             let replies = 0;
                             if (object.replies && object.replies.length > 0) {
                                 replies = object.replies.length
@@ -430,6 +502,8 @@ const QuestionPage: React.FC = (props) => {
                             setDeleteModalShow(true) }}>Delete</Button>
                     :
                     ''}
+                    
+                    
                 </p>
 
 
@@ -477,8 +551,8 @@ const QuestionPage: React.FC = (props) => {
     }
 
     //list of feed objects
-    const feedView = (feedList: { id: string; data: { comment: string; timestamp: { seconds: number; nanoseconds: number }; author: string; authorName: string; parent: string; thread: string; upvotes: number; selected: number }; replies: any[] }[]) => {
-        const feedItems = feedList.map((object: { id: string; data: { comment: string; timestamp: { seconds: number, nanoseconds: number }; author: string; authorName: string; parent: string; thread: string; upvotes: number; selected: number }; replies: any[] }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
+    const feedView = (feedList: { id: string; data: { comment: string; timestamp: { seconds: number; nanoseconds: number }; author: string; authorName: string; parent: string; thread: string; upvotes: number; selected: number; edit: string }; replies: any[] }[]) => {
+        const feedItems = feedList.map((object: { id: string; data: { comment: string; timestamp: { seconds: number, nanoseconds: number }; author: string; authorName: string; parent: string; thread: string; upvotes: number; selected: number; edit: string }; replies: any[] }) => <div key={object.id} style={{ paddingTop: 15 }}>{feedCard(object)}</div>
         )
         return feedItems
     }
@@ -545,7 +619,7 @@ const QuestionPage: React.FC = (props) => {
                     setDeleteModalShow(false)
                 }}>
                     <Modal.Header>
-                        <Modal.Title>Delete Post</Modal.Title>
+                        <Modal.Title>Delete</Modal.Title>
                     </Modal.Header>
                     <Modal.Body>
                         Are you sure you want to delete this post?
@@ -585,6 +659,93 @@ const QuestionPage: React.FC = (props) => {
                         
                     </Modal.Footer>
                 </Modal>
+
+            <Modal show={editModalShow} onHide={() => {
+                setEditModalShow(false)
+            }}>
+                <Modal.Header>
+                    <Modal.Title>Edit</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {fullEdit ?
+                    <InputGroup>
+                    {editCollection === 'posts' ?
+                    <div>
+                                    <p style={{marginBottom: 10}}>Edit Title</p>
+                                    <Form.Text className='text-danger'>{titleErr}</Form.Text>
+                                    <Form.Control style={{ marginBottom: 20 }}onChange={handleTitleChange} value={editTitle} />
+                                    <p style={{ marginBottom: 10 }}>Edit Description</p>
+                                    <Form.Control style={{ marginBottom: 20 }} as="textarea" rows={3} onChange={handleEditChange} value={editText} />
+                                    <p style={{ marginBottom: 10 }}>Edit Bounty</p>
+                                    <Form.Control onChange={handleBountyChange} value={editBounty} />
+
+                                    <Form.Text className='text-danger'>{bountyErr}</Form.Text>
+                    </div>
+                                
+                    :
+                                <Form.Control as="textarea" rows={3} onChange={handleEditChange} value={editText} />
+                    }
+                        
+                    </InputGroup>
+                    :
+                    editCollection === 'posts' ?
+                    <div>
+                                <p style={{ marginBottom: 10 }}>Title</p>
+                                <Form.Text className='text-danger'>{titleErr}</Form.Text>
+                                <Form.Control style={{ marginBottom: 20 }} as="text" value={editTitle} readOnly/>
+                                <p style={{ marginBottom: 10 }}>Description</p>
+                                <Form.Control style={{marginBottom: 20}} as="textarea" value={readOnlyText} readOnly />
+                                <p style={{ marginBottom: 10 }}>Edit</p>
+                                <Form.Control style={{ marginBottom: 20 }} as="textarea" rows={3} onChange={handleEditChange} value={editText} />
+                                <p style={{ marginBottom: 10 }}>Edit Bounty</p>
+                                <Form.Control onChange={handleBountyChange} value={editBounty} />
+                                <Form.Text className='text-danger'>{bountyErr}</Form.Text>
+                    </div>
+                    :
+                    <div>
+                            <Form.Control as="textarea" value={readOnlyText} readOnly />
+                            <Form.Control style={{marginTop: 20}} as="textarea" rows={3} onChange={handleEditChange} value={editText} />
+                    </div>
+                                
+                    
+                    }
+                </Modal.Body>
+                <Modal.Footer>
+                    {editHandling ?
+                    <Button disabled variant="success">
+                            <Spinner
+                                as="span"
+                                animation="border"
+                                size="sm"
+                                role="status"
+                                aria-hidden="true"
+                            />
+                    </Button>
+                    :
+                        <Button variant="success" onClick={() => {
+                            setEditHandling(true)
+                            if (editCollection === 'posts') {
+                                if (editBountyCheck && titleErr === '') {
+                                    functions().httpsCallable('editPost')({ collect: editCollection, id: editID, fullEdit: fullEdit, editText: editText, title: editTitle, bounty: editBounty }).then(async () => {
+                                        setEditModalShow(false);
+                                        window.location.reload()
+                                    })
+                                } 
+                            } else {
+                                functions().httpsCallable('editPost')({ collect: editCollection, id: editID, fullEdit: fullEdit, editText: editText }).then(async () => {
+                                    setEditModalShow(false);
+                                    setComments(await getComments(postid));
+                                    setCommentsDone(true);
+                                    setEditHandling(false);
+                                })
+                            }
+                            setEditHandling(false);
+                            
+                        }}>Save</Button>
+                    }
+                    
+                </Modal.Footer>
+            </Modal>
 
             <Modal show={reportModalShow} onHide={() => {
                 setReportModalShow(false)
@@ -656,7 +817,7 @@ const QuestionPage: React.FC = (props) => {
                                         setChanged(!changed)
                                     }}>▼</Button>
 
-                                    <Card bg="light" style={{ marginTop: 15 }}>
+                                    <Card style={{ marginTop: 15 }}>
                                         {post?.bounty <= 0 ?
                                             <Card.Title style={{ paddingTop: 10 }}>Claimed</Card.Title>
                                             :
@@ -672,7 +833,7 @@ const QuestionPage: React.FC = (props) => {
                                 Posted by <a href={`/user/${post?.authorName}`}>{`@${post?.authorName}`}</a> {timeMessage}
                             {' - '}
                             &nbsp;
-                            <Button disabled={!session.auth} size="sm" variant='outline-danger' onClick={() => {
+                            <Button style={{marginTop: 5}} disabled={!session.auth} size="sm" variant='outline-danger' onClick={() => {
                                     setReportAuthorName(post.authorName)
                                     setReportID(postid)
                                     setReportModalShow(true)
@@ -681,8 +842,34 @@ const QuestionPage: React.FC = (props) => {
                             </Button>
                             &nbsp;
                             &nbsp;
+                            {postSelf ?
+                                    <Button size="sm" style={{ marginTop: 5 }} variant='outline-success' onClick={() => {
+                                        setEditCollection('posts')
+                                        setEditID(postid)
+                                        if (numComments === 0 && post.awarded === false) {
+                                            setFullEdit(true)
+                                            setEditText(post.desc)
+                                        } else {
+                                            setFullEdit(false)
+                                            setReadOnlyText(post.desc)
+                                            if (post.edit && post.edit.length > 0) {
+                                                setEditText(post.edit)
+                                            } else {
+                                                setEditText('EDIT: ')
+                                            }
+                                        }
+
+                                        setEditTitle(post.title)
+                                        setEditBounty(post.bounty)
+
+                                        setEditModalShow(true)
+                                    }}>Edit</Button>
+                                    :
+                                    ''}
+                                    &nbsp;
+                                    &nbsp;
                             {postSelf && post.awarded == false ?
-                                    <Button variant='danger' onClick={() => {
+                                    <Button size="sm" style={{marginTop: 5}} variant='outline-danger' onClick={() => {
                                         setDeleteCollection('posts')
                                         setDeleteID(postid)
                                         setNumReplies(numComments)
@@ -691,6 +878,7 @@ const QuestionPage: React.FC = (props) => {
                                     ''
                             }
                             
+                    
 
                             </Card.Text>
                         </Card.Body>

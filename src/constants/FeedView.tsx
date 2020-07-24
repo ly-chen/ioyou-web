@@ -257,7 +257,7 @@ const FeedView: React.FC<any> = ({ feedList, nowSeconds, userDoc, upvoted, downv
 
                                 </Col>
                                 <Col xs={3} md={2} style={{ textAlign: 'center' }}>
-                                    <Card bg="light" >
+                                    <Card>
                                         {object.data.bounty <= 0 ?
                                             <Card.Title style={{ paddingTop: 10 }}>Claimed</Card.Title>
                                             :
