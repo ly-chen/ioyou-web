@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react'
 import { useParams } from 'react-router-dom';
 import { useFirebase, Firebase } from '../Firebase'
 import { firestore } from 'firebase'
-import { Navbar, Nav, Button, DropdownButton, Dropdown, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card } from 'react-bootstrap'
+import { Navbar, Nav, Button, DropdownButton, Dropdown, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card, Tabs, Tab } from 'react-bootstrap'
 import { useSession } from '../Session'
 import styles from './Profile.module.css'
 import { StringLocale } from 'yup';
@@ -30,12 +30,15 @@ const ProfilePage: React.FC = () => {
     const [ss, setSS] = useState<boolean>(false);
 
     const [history, setHistory] = useState<any[] | null>(null);
+    const [commentHistory, setCommentHistory] = useState<any[] | null>(null);
 
     const [historyDone, setHistoryDone] = useState<boolean>(false);
+    const [commentHistoryDone, setCommentHistoryDone] = useState<boolean>(false);
 
     const [nowSeconds, setNowSeconds] = useState<number>(0);
 
     const [lastPost, setLastPost] = useState<any>(null)
+    const [lastComment, setLastComment] = useState<any>(null)
 
     const [sort, setSort] = useState<string>('timestamp.seconds')
 
@@ -43,17 +46,22 @@ const ProfilePage: React.FC = () => {
     //list of subjects
     const [actives, setActives] = useState<any>({});
 
-    const sortButton = (sort: string) => {
+    const sortButton = (collect: string, sort: string) => {
         const handleSort = async (sort: string) => {
             setLastPost(null)
-            setHistory(null)
-            setHistoryDone(false)
-            await getPosts(sort, userid, null, null)
+            if (collect === 'posts') {
+                setHistory(null)
+                setHistoryDone(false)
+            } else {
+                setCommentHistory(null)
+                setCommentHistoryDone(false)
+            }
+            await getPosts(collect, sort, userid, null, null)
             setSort(sort)
         }
 
         return (
-            <DropdownButton id="sort" title={sort == 'timestamp.seconds' ? 'Most Recent' : 'Top Rated'} variant='light' style={{ paddingBottom: 15 }}>
+            <DropdownButton id="sort" title={sort == 'timestamp.seconds' ? 'Most Recent' : 'Top Rated'} variant='light' style={{ paddingTop: 15, paddingBottom: 15 }}>
                 <Dropdown.Item active={sort == 'timestamp.seconds'}
                     onClick={async () => {
                         if (sort == 'timestamp.seconds') {
@@ -78,14 +86,15 @@ const ProfilePage: React.FC = () => {
                 >
                     Top of All Time
                                         </Dropdown.Item>
+
             </DropdownButton>
         )
     }
 
-    const getPosts = async (sort: string, userID: string, last: any | null, history: any[] | null) => {
+    const getPosts = async (collect: string, sort: string, userID: string, last: any | null, history: any[] | null) => {
         try {
             var docList: any[] = []
-            var query = firebase.db.collection('posts').where('author', '==', userID).orderBy(sort, "desc");
+            var query = firebase.db.collection(collect).where('author', '==', userID).orderBy(sort, "desc");
 
             if (last) {
                 console.log('lastPost = ', last)
@@ -107,26 +116,38 @@ const ProfilePage: React.FC = () => {
                 docList = [...docList, { id: doc.id, data: doc.data() }];
             });
 
-            for (let i = 0; i < docList.length; i++) {
-                const doc = docList[i]
-                const numComments = await firebase.db.collection('comments').where('thread', '==', doc.id).get()
-                docList[i] = { id: doc.id, data: doc.data, numComments: numComments.size }
-            }
-
             const lastDoc = docList[docList.length - 1]
-            setLastPost(lastDoc)
 
-            if (history) {
-                await setHistory([...history, ...docList])
+            if (collect === 'posts') {
+                for (let i = 0; i < docList.length; i++) {
+                    const doc = docList[i]
+                    const numComments = await firebase.db.collection('comments').where('thread', '==', doc.id).get()
+                    docList[i] = { id: doc.id, data: doc.data, numComments: numComments.size }
+                }
+                setLastPost(lastDoc)
+                if (history) {
+                    await setHistory([...history, ...docList])
+                } else {
+                    await setHistory(docList)
+                }
+                console.log('docList = ', docList)
+                setHistoryDone(true)
             } else {
-                await setHistory(docList)
+                setLastComment(lastDoc)
+                if (history) {
+                    await setCommentHistory([...history, ...docList])
+                } else {
+                    await setCommentHistory(docList)
+                }
+                console.log('docList = ', docList)
+                setCommentHistoryDone(true)
             }
 
-            console.log('docList = ', docList)
-            setHistoryDone(true)
+
         } catch (e) {
             console.log(e)
             setHistoryDone(true)
+            setCommentHistoryDone(true)
         }
     }
 
@@ -163,7 +184,8 @@ const ProfilePage: React.FC = () => {
                 }
 
 
-                getPosts('timestamp.seconds', userID, lastPost, history);
+                getPosts('posts', 'timestamp.seconds', userID, lastPost, history);
+                getPosts('comments', 'timestamp.seconds', userID, lastComment, commentHistory);
                 setUserLoading(false);
             }
         }
@@ -476,26 +498,48 @@ const ProfilePage: React.FC = () => {
 
                         </Card>
 
-                        <h2 style={{ paddingTop: 50, paddingLeft: 22, paddingBottom: 15 }}>Post History</h2>
+                        <h2 style={{ paddingTop: 50, paddingLeft: 22, paddingBottom: 15 }}> History</h2>
 
-                        {sortButton(sort)}
+                        <Tabs defaultActiveKey={'Comments'} id="feed-nav">
+                            <Tab eventKey="Posts" title="Posts">
+                                {sortButton('posts', sort)}
+                                {history
+                                    ?
+                                    <div>
 
-                        {history
-                            ?
-                            <div>
+                                        <FeedView feedList={history} nowSeconds={nowSeconds} userDoc={userSelfDoc} upvoted={upvoted} downvoted={downvoted} setUpvoted={setUpvoted} setDownvoted={setDownvoted} setChanged={setChanged} changed={changed} />
+                                        <Button variant='light' onClick={() => { getPosts('posts', sort, userid, lastPost, history) }}>Load more</Button>
+                                    </div>
+                                    :
+                                    historyDone ?
+                                        <h3 style={{ paddingTop: 15 }}>No posts.</h3>
+                                        :
+                                        <div style={{ marginTop: 15 }}>
+                                            <Spinner style={{ marginTop: 30, marginLeft: 30 }} animation="border" />
+                                        </div>
 
-                                <FeedView feedList={history} nowSeconds={nowSeconds} userDoc={userSelfDoc} upvoted={upvoted} downvoted={downvoted} setUpvoted={setUpvoted} setDownvoted={setDownvoted} setChanged={setChanged} changed={changed} />
-                                <Button variant='light' onClick={() => { getPosts(sort, userid, lastPost, history) }}>Load more</Button>
-                            </div>
-                            :
-                            historyDone ?
-                                <h3 style={{ paddingTop: 15 }}>No posts.</h3>
-                                :
-                                <div style={{ marginTop: 15 }}>
-                                    <Spinner style={{ marginTop: 30, marginLeft: 30 }} animation="border" />
-                                </div>
+                                }
+                            </Tab>
+                            <Tab eventKey="Comments" title="Comments">
+                                {sortButton('comments', sort)}
+                                {commentHistory
+                                    ?
+                                    <div>
 
-                        }
+                                        <FeedView feedList={commentHistory} nowSeconds={nowSeconds} userDoc={userSelfDoc} upvoted={upvoted} downvoted={downvoted} setUpvoted={setUpvoted} setDownvoted={setDownvoted} setChanged={setChanged} changed={changed} commentCard={true} />
+                                        <Button variant='light' onClick={() => { getPosts('comments', sort, userid, lastComment, commentHistory) }}>Load more</Button>
+                                    </div>
+                                    :
+                                    commentHistoryDone ?
+                                        <h3 style={{ paddingTop: 15 }}>No posts.</h3>
+                                        :
+                                        <div style={{ marginTop: 15 }}>
+                                            <Spinner style={{ marginTop: 30, marginLeft: 30 }} animation="border" />
+                                        </div>
+                                }
+                            </Tab>
+                        </Tabs>
+
 
                     </Container>
                     :

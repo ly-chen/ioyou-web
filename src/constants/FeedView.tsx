@@ -219,9 +219,17 @@ const FeedView: React.FC<any> = ({ feedList, nowSeconds, userDoc, upvoted, downv
                             handleVote(false)
                             setChanged(!changed)
                         }}>▼</Button>
+                        &nbsp;
                         {' - '}
-                    &nbsp;
-                    <Button disabled={!session.auth} size="sm" variant='outline-danger' onClick={() => {
+
+                        {message} {' - '} &nbsp;
+                        <Button size="sm" variant='outline-dark' onClick={() => {
+                            window.location.href = `/post/${object.data.thread}`
+                        }}>
+                            See Post
+                    </Button>
+                        {' - '} &nbsp;
+                        <Button disabled={!session.auth} size="sm" variant='outline-danger' onClick={() => {
                             setReportAuthorName(object.data.authorName)
                             setReportID(object.id)
                             setReportModalShow(true)
@@ -296,7 +304,7 @@ const FeedView: React.FC<any> = ({ feedList, nowSeconds, userDoc, upvoted, downv
                             {' '}
                         &nbsp;
                         {object.numComments == 1 ?
-                                <Button size="sm" variant="light" onClick={() => {
+                                <Button variant="light" onClick={() => {
                                     getComments(object.id)
                                     setPostTitle(object.data.title)
                                     setPostDesc(object.data.desc)
@@ -304,7 +312,7 @@ const FeedView: React.FC<any> = ({ feedList, nowSeconds, userDoc, upvoted, downv
                                     setCommentsExpand(true)
                                 }}>{object.numComments} comment</Button>
                                 :
-                                <Button size="sm" variant="light" onClick={() => {
+                                <Button variant="light" onClick={() => {
                                     getComments(object.id)
                                     setPostTitle(object.data.title)
                                     setPostDesc(object.data.desc)
@@ -316,7 +324,7 @@ const FeedView: React.FC<any> = ({ feedList, nowSeconds, userDoc, upvoted, downv
                             {' '} - posted by <a href={`/user/${object.data.authorName}`}>{`@${object.data.authorName}`}</a> - {message}
                             {' - '}
                         &nbsp;
-                        <Button disabled={!session.auth} size="sm" variant='outline-danger' onClick={() => {
+                        <Button disabled={!session.auth} size="sm" style={{ marginTop: 8 }} variant='outline-danger' onClick={() => {
                                 setReportAuthorName(object.data.authorName)
                                 setReportID(object.id)
                                 setReportModalShow(true)
