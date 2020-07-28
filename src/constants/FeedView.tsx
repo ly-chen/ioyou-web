@@ -279,6 +279,7 @@ const FeedView: React.FC<any> = ({ feedList, nowSeconds, userDoc, upvoted, downv
                         }
 
                         <Card.Text> {object.data.desc}</Card.Text>
+                        <Card.Text> {object.data.edit}</Card.Text>
 
 
                         <Card.Text style={{ paddingTop: 10 }}>

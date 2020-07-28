@@ -271,6 +271,8 @@ const QuestionPage: React.FC = (props) => {
                     setTimeMessage(message)
                 }
 
+                console.log('postDoc = ', postDoc)
+
                 setPost(postDoc)
                 if (postDoc?.author == session?.auth?.uid) {
                     setPostSelf(true)
@@ -684,10 +686,19 @@ const QuestionPage: React.FC = (props) => {
                                     <Form.Control style={{ marginBottom: 20 }}onChange={handleTitleChange} value={editTitle} />
                                     <p style={{ marginBottom: 10 }}>Edit Description</p>
                                     <Form.Control style={{ marginBottom: 20 }} as="textarea" rows={3} onChange={handleEditChange} value={editText} />
-                                    <p style={{ marginBottom: 10 }}>Edit Bounty</p>
-                                    <Form.Control onChange={handleBountyChange} value={editBounty} />
+                                    
+                                    {post.bulletin === false ?
+                                    <div>
+                                            <p style={{ marginBottom: 10 }}>Edit Bounty</p>
+                                            <Form.Control onChange={handleBountyChange} value={editBounty} />
 
-                                    <Form.Text className='text-danger'>{bountyErr}</Form.Text>
+                                            <Form.Text className='text-danger'>{bountyErr}</Form.Text>
+                                    </div>
+                                    :
+                                    <div></div>
+
+                                    }
+                                    
                     </div>
                                 
                     :
@@ -705,9 +716,17 @@ const QuestionPage: React.FC = (props) => {
                                 <Form.Control style={{marginBottom: 20}} as="textarea" value={readOnlyText} readOnly />
                                 <p style={{ marginBottom: 10 }}>Edit</p>
                                 <Form.Control style={{ marginBottom: 20 }} as="textarea" rows={3} onChange={handleEditChange} value={editText} />
-                                <p style={{ marginBottom: 10 }}>Edit Bounty</p>
-                                <Form.Control onChange={handleBountyChange} value={editBounty} />
-                                <Form.Text className='text-danger'>{bountyErr}</Form.Text>
+
+                                {post.bounty === false ?
+                                <div>
+                                        <p style={{ marginBottom: 10 }}>Edit Bounty</p>
+                                        <Form.Control onChange={handleBountyChange} value={editBounty} />
+                                        <Form.Text className='text-danger'>{bountyErr}</Form.Text>
+                                </div>
+                                :
+                                <div></div>
+                                }
+                                
                     </div>
                     :
                     <div>
@@ -747,7 +766,7 @@ const QuestionPage: React.FC = (props) => {
                                     setEditHandling(false);
                                 })
                             }
-                            setEditHandling(false);
+                            
                             
                         }}>Save</Button>
                     }
@@ -806,6 +825,7 @@ const QuestionPage: React.FC = (props) => {
                                     <Card.Title>{post?.title}</Card.Title>
                                     <Card.Subtitle>{channelView(post)}</Card.Subtitle>
                                     <Card.Text>{post?.desc}</Card.Text>
+                                    <Card.Text>{post?.edit}</Card.Text>
                                 </Col>
                                 <Col xs={3} sm={2} style={{ textAlign: 'center' }}>
                                     <Button disabled={!session.auth} active={upvoted.includes(postid)} size="sm" variant="outline-primary" onClick={() => {
@@ -825,14 +845,19 @@ const QuestionPage: React.FC = (props) => {
                                         setChanged(!changed)
                                     }}>▼</Button>
 
-                                    <Card style={{ marginTop: 15 }}>
-                                        {post?.bounty <= 0 ?
-                                            <Card.Title style={{ paddingTop: 10 }}>Claimed</Card.Title>
-                                            :
-                                            <Card.Title style={{ paddingTop: 10 }}>{post?.bounty} cr.</Card.Title>
-                                        }
-                                        
-                                    </Card>
+                                    {post.bulletin ? 
+                                    <div></div>
+                                    :
+                                        <Card style={{ marginTop: 15 }}>
+                                            {post?.bounty <= 0 ?
+                                                <Card.Title style={{ paddingTop: 10 }}>Claimed</Card.Title>
+                                                :
+                                                <Card.Title style={{ paddingTop: 10 }}>{post?.bounty} cr.</Card.Title>
+                                            }
+
+                                        </Card>
+                                    }
+                                    
                                 </Col>
                             </Row>
 
@@ -854,7 +879,7 @@ const QuestionPage: React.FC = (props) => {
                                     <Button size="sm" style={{ marginTop: 5 }} variant='outline-success' onClick={() => {
                                         setEditCollection('posts')
                                         setEditID(postid)
-                                        if (numComments === 0 && post.awarded === false) {
+                                        if (numComments === 0 && (post.awarded === false || post.bulletin === true)) {
                                             setFullEdit(true)
                                             setEditText(post.desc)
                                         } else {
@@ -876,7 +901,7 @@ const QuestionPage: React.FC = (props) => {
                                     ''}
                                     &nbsp;
                                     &nbsp;
-                            {postSelf && post.awarded == false ?
+                            {(postSelf && post.awarded == false) || post.bulletin == true ?
                                     <Button size="sm" style={{marginTop: 5}} variant='outline-danger' onClick={() => {
                                         setDeleteCollection('posts')
                                         setDeleteID(postid)
