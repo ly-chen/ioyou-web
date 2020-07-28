@@ -2,12 +2,14 @@ import React, { useState, useCallback, useEffect } from 'react'
 import { useParams } from 'react-router-dom';
 import { useFirebase, Firebase } from '../Firebase'
 import { firestore } from 'firebase'
-import { Navbar, Nav, Button, DropdownButton, Dropdown, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card, Tabs, Tab } from 'react-bootstrap'
+import { Navbar, Nav, Button, DropdownButton, Dropdown, Container, Row, Col, Spinner, Jumbotron, Image, ProgressBar, OverlayTrigger, Popover, Carousel, Card, Tabs, Tab, Modal } from 'react-bootstrap'
 import { useSession } from '../Session'
 import styles from './Profile.module.css'
 import { StringLocale } from 'yup';
 import { NavBar } from '../../constants'
 import { FeedView } from '../../constants'
+
+import { auth } from 'firebase'
 
 const ProfilePage: React.FC = () => {
     const { username } = useParams()
@@ -42,9 +44,14 @@ const ProfilePage: React.FC = () => {
 
     const [sort, setSort] = useState<string>('timestamp.seconds')
 
+    const [verifyMessageModalShow, setVerifyMessageModalShow] = useState<boolean>(false);
+    const [sentEmail, setSentEmail] = useState<boolean>(false);
+
 
     //list of subjects
     const [actives, setActives] = useState<any>({});
+    const [trues, setTrues] = useState<number>(0);
+    const [activesErr, setActivesErr] = useState<string>('');
 
     const sortButton = (collect: string, sort: string) => {
         const handleSort = async (sort: string) => {
@@ -110,6 +117,7 @@ const ProfilePage: React.FC = () => {
             if (posts.empty || posts == null) {
                 console.log('No matching documents')
                 setHistoryDone(true);
+                setCommentHistoryDone(true);
                 return;
             }
             posts.forEach(doc => {
@@ -152,6 +160,7 @@ const ProfilePage: React.FC = () => {
     }
 
     useEffect(() => {
+
         var now = new Date();
         var seconds = ((now.getTime()) * .001) >> 0;
         setNowSeconds(seconds);
@@ -162,12 +171,19 @@ const ProfilePage: React.FC = () => {
                 console.log('empty');
                 setUserLoading(false);
             } else {
-
+                let numTrues = 0;
                 const userID = await results.docs[0].id
                 setUserid(userID)
                 const userResults = await results.docs[0].data()
                 setUser(userResults)
                 setActives(userResults.actives)
+                for (let sub in userResults.actives) {
+                    if (userResults.actives[sub] === true) {
+                        numTrues += 1
+                    }
+                }
+                setTrues(numTrues);
+                console.log('numTrues = ', numTrues);
 
                 if (userResults.actives) {
                     if (userResults.actives['French'] || userResults.actives['Mandarin'] || userResults.actives['Spanish'] || userResults.actives['Languages (General)']) {
@@ -198,9 +214,11 @@ const ProfilePage: React.FC = () => {
                 if (self?.data()?.username == username) {
                     setUserSelf(true);
                 }
+
                 setUserSelfDoc(self.data());
                 setUpvoted(self.data()?.upvoted)
                 setDownvoted(self.data()?.downvoted)
+
             }
 
 
@@ -233,11 +251,19 @@ const ProfilePage: React.FC = () => {
 
     const subjectEdit = (subject: string) => {
         let activesEdit = actives;
+
         if (actives[subject] == true) {
+            setActivesErr('');
             activesEdit[subject] = false;
+            setTrues(trues - 1)
             setActives(activesEdit)
         } else {
+            if (trues >= 9) {
+                setActivesErr('Maximum 9 channels.')
+                return
+            }
             activesEdit[subject] = true;
+            setTrues(trues + 1)
             setActives(activesEdit);
         }
     }
@@ -443,6 +469,22 @@ const ProfilePage: React.FC = () => {
     return (
         <div>
             <NavBar />
+            <Modal show={verifyMessageModalShow} onHide={() => {
+                setVerifyMessageModalShow(false)
+                setSentEmail(false)
+            }}>
+                <Modal.Header closeButton>
+                    <Modal.Title>
+                        Verify your email
+                        </Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    Check your email for a verification link. You cannot post without having verified your email, and your account will be deleted in 3 days without verification.
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button disabled={sentEmail} onClick={() => { if (userSelf) { auth().currentUser?.sendEmailVerification().then(() => setSentEmail(true)) } }}>{sentEmail ? 'Sent!' : 'Resend Email'}</Button>
+                </Modal.Footer>
+            </Modal>
             {userLoading ?
                 <Container className={styles.paddingTop}>
                     <Spinner style={{ marginTop: 30, marginLeft: 30 }} animation="border" />
@@ -463,7 +505,14 @@ const ProfilePage: React.FC = () => {
                                             :
                                             <h3>{user.credits} credits</h3>
                                         }
-
+                                        {userSelf ?
+                                            auth().currentUser?.emailVerified ?
+                                                <div></div>
+                                                :
+                                                <Button variant='warning' onClick={() => { setVerifyMessageModalShow(true) }}>Verify Email</Button>
+                                            :
+                                            <div></div>
+                                        }
                                     </Col>
                                 </Row>
 
@@ -474,11 +523,14 @@ const ProfilePage: React.FC = () => {
                                     <h3 style={{ paddingRight: 15 }}>Channels</h3>
                                     {userSelf ?
                                         editSubjects ?
-                                            <Button variant="primary" onClick={async () => {
-                                                setEditSubjects(false)
-                                                await firestore().collection('users').doc(session.auth?.uid).update({ actives: actives })
+                                            <div>
+                                                <Button variant="primary" onClick={async () => {
+                                                    setEditSubjects(false)
+                                                    await firestore().collection('users').doc(session.auth?.uid).update({ actives: actives })
 
-                                            }}>Save</Button>
+                                                }}>Save</Button>
+                                                <p className="text-danger">{activesErr}</p>
+                                            </div>
                                             :
                                             <Button variant="outline-dark" onClick={() => { setEditSubjects(true) }}>Edit</Button>
                                         :

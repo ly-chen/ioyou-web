@@ -151,7 +151,7 @@ const PostPage: React.FC<any> = ({ setPostModalShow }) => {
                 if (channels.length == 0) {
                     newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: ['General'], authorName: name, bulletin: false, upvotes: 0, bounty: Number(bounty), awarded: false }
                 } else {
-                    newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: channels, authorName: name, upvotes: 0, bulletin: false, bounty: Number(bounty), awarded: false }
+                    newPost = { title: title, desc: description, timestamp: firestore.Timestamp.now(), author: session?.auth?.uid, channels: ['bulletin'], authorName: name, upvotes: 0, bulletin: false, bounty: Number(bounty), awarded: false }
                 }
             }
         }
@@ -164,93 +164,102 @@ const PostPage: React.FC<any> = ({ setPostModalShow }) => {
 
 
     return (
-        <Container>
-            <Form onSubmit={handleSubmit}>
-                <ButtonGroup style={{ paddingBottom: 15 }}>
-                    <Button variant='outline-primary' active={!selectBul} onClick={() => { setSelectBul(false) }}>Academic</Button>
-                    <Button variant='outline-primary' active={selectBul} onClick={() => {
-                        setSelectBul(true)
-                    }}>Bulletin</Button>
-                </ButtonGroup>
-                {selectBul ?
-                    <div></div>
-                    :
-                    <Form.Group controlId="channels">
-                        <Form.Label>Channels</Form.Label>
-                        <Row style={{ marginLeft: 10 }}>
-                            {selectedView()}
-                            {subjectsView()}
-                        </Row>
-                        <Form.Control type="text" placeholder={channels.length > 0 ? "Add additional subjects if necessary." : "What subjects?"} onChange={handleChannelChange} onBlur={() => {
-                            if (channelList.length == 1) {
-                                setChannels([...channels, ...channelList])
-                                setInput('')
-                                setChannelList([])
-                            }
-                        }} value={input} />
-                        <Form.Text className="text-danger">
-                            {err}
-                        </Form.Text>
+        auth().currentUser?.emailVerified ?
+            <Container>
+
+                <Form onSubmit={handleSubmit}>
+                    <ButtonGroup style={{ paddingBottom: 15 }}>
+                        <Button variant='outline-primary' active={!selectBul} onClick={() => { setSelectBul(false) }}>Academic</Button>
+                        <Button variant='outline-primary' active={selectBul} onClick={() => {
+                            setSelectBul(true)
+                        }}>Bulletin</Button>
+                    </ButtonGroup>
+                    {selectBul ?
+                        <div></div>
+                        :
+                        <div>
+                            <p>Wallet: {userDoc?.credits} credits</p>
+                            <Form.Group controlId="channels">
+                                <Form.Label>Channels</Form.Label>
+                                <Row style={{ marginLeft: 10 }}>
+                                    {selectedView()}
+                                    {subjectsView()}
+                                </Row>
+                                <Form.Control type="text" placeholder={channels.length > 0 ? "Add additional subjects if necessary." : "What subjects?"} onChange={handleChannelChange} onBlur={() => {
+                                    if (channelList.length == 1) {
+                                        setChannels([...channels, ...channelList])
+                                        setInput('')
+                                        setChannelList([])
+                                    }
+                                }} value={input} />
+                                <Form.Text className="text-danger">
+                                    {err}
+                                </Form.Text>
+                            </Form.Group>
+                        </div>
+                    }
+
+                    <Form.Group controlId="title">
+                        <Form.Label>Title</Form.Label>
+                        <Form.Control required type="text" placeholder="What's up?" onChange={handleTitleChange} />
                     </Form.Group>
-                }
 
-                <Form.Group controlId="title">
-                    <Form.Label>Title</Form.Label>
-                    <Form.Control required type="text" placeholder="What's up?" onChange={handleTitleChange} />
-                </Form.Group>
+                    <Form.Group controlId="description">
+                        <Form.Label>Description</Form.Label>
+                        <Form.Control as="textarea" rows={3} placeholder="Add more details if necessary." onChange={handleDescriptionChange} />
+                    </Form.Group>
 
-                <Form.Group controlId="description">
-                    <Form.Label>Description</Form.Label>
-                    <Form.Control as="textarea" rows={3} placeholder="Add more details if necessary." onChange={handleDescriptionChange} />
-                </Form.Group>
-
-                {selectBul ?
-                    <div></div>
-                    :
-                    <Form.Group controlId="bounty">
-                        <Form.Label>Bounty</Form.Label>
-                        <Form.Control required as="input" placeholder="Credits" onChange={handleBountyChange} value={bounty} />
-                        {bounty > 0 && bountyCheck == true ?
-                            bounty > userDoc.credits ?
-                                <Form.Text className='text-danger'>
-                                    {bountyErr}
+                    {selectBul ?
+                        <div></div>
+                        :
+                        <Form.Group controlId="bounty">
+                            <Form.Label>Bounty</Form.Label>
+                            <Form.Control required as="input" placeholder="Credits" onChange={handleBountyChange} value={bounty} />
+                            {bounty > 0 && bountyCheck == true ?
+                                bounty > userDoc.credits ?
+                                    <Form.Text className='text-danger'>
+                                        {bountyErr}
+                                    </Form.Text>
+                                    :
+                                    <Form.Text className="text-success">
+                                        Looks good!
                                 </Form.Text>
                                 :
-                                <Form.Text className="text-success">
-                                    Looks good!
+                                <Form.Text className="text-danger">
+                                    At least 1 credit must be posted.
                                 </Form.Text>
-                            :
-                            <Form.Text className="text-danger">
-                                At least 1 credit must be posted.
-                                </Form.Text>
-                        }
+                            }
 
-                    </Form.Group>
-                }
+                        </Form.Group>
+                    }
 
-                {handling ?
-                    <Button variant="primary" disabled style={{ marginTop: 15 }}>
-                        <Spinner
-                            as="span"
-                            animation="border"
-                            size="sm"
-                            role="status"
-                            aria-hidden="true"
-                        />
-                    </Button>
-
-                    :
-                    <Button variant="primary" type="submit" style={{ marginTop: 15 }}>
-                        Post
+                    {handling ?
+                        <Button variant="primary" disabled style={{ marginTop: 15 }}>
+                            <Spinner
+                                as="span"
+                                animation="border"
+                                size="sm"
+                                role="status"
+                                aria-hidden="true"
+                            />
                         </Button>
 
-                }
+                        :
+                        <Button variant="primary" type="submit" style={{ marginTop: 15 }}>
+                            Post
+                        </Button>
+
+                    }
 
 
-                {postToView()}
+                    {postToView()}
 
-            </Form>
-        </Container>
+                </Form>
+            </Container>
+            :
+            <Container>
+                <h3>Verify your email in your Profile page.</h3>
+            </Container>
     )
 }
 

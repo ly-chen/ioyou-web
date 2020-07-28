@@ -403,6 +403,7 @@ const QuestionPage: React.FC = (props) => {
                     </Row>
                     :
                     postSelf ?
+                        object.data.author !== session.auth?.uid ?
                         <Row>
                             <Col>
                                 <p style={{ fontSize: 20 }}>{`@${object.data.authorName}`}</p>
@@ -417,6 +418,12 @@ const QuestionPage: React.FC = (props) => {
                                     setAwardModalShow(true) }}>Award</Button>
                             </Col>
                         </Row>
+                        :
+                            <div>
+                                <p style={{ fontSize: 20 }}>{`@${object.data.authorName}`}</p>
+                                <p className={styles.fontLess}> {object.data.comment}</p>
+                                <p className={styles.fontLess}> {object.data.edit}</p>
+                            </div>
                         :
                         <div>
                             <p style={{ fontSize: 20 }}>{`@${object.data.authorName}`}</p>
@@ -449,7 +456,8 @@ const QuestionPage: React.FC = (props) => {
                         setChanged(!changed)
                     }}>▼</Button>
                     {' - '}
-                    <Button variant="light" size="sm" onClick={() => { setReply(object.id) }}>Reply</Button>
+                        <Button disabled={auth().currentUser?.emailVerified === false} variant="light" size="sm" onClick={() => { setReply(object.id) }}>Reply</Button>
+                    
                     {' '} - {message}
                     {' - '}
                     &nbsp;
@@ -912,7 +920,10 @@ const QuestionPage: React.FC = (props) => {
 
                             </Form>
                             :
+                            auth().currentUser?.emailVerified ?
                             <Button variant="primary" onClick={() => { setActiveAnswer(true) }}>Comment</Button>
+                            :
+                                <Button disabled variant="primary" onClick={() => { setActiveAnswer(true) }}>Verify Email to Comment</Button>
                         :
                         <div></div>
                     }

@@ -14,6 +14,7 @@ const SignupPage: React.FC = () => {
     const [name, setName] = useState<string>('')
     const [username, setUsername] = useState<string>('')
     const [email, setEmail] = useState<string>('')
+    const [emailErr, setEmailErr] = useState<string>('')
     const [password, setPassword] = useState<string>('')
     const [err, setErr] = useState<string>('')
     const [usernameErr, setUsernameErr] = useState<string>('')
@@ -28,6 +29,14 @@ const SignupPage: React.FC = () => {
         }
     }, [session, firebase])
 
+    var actionCodeSettings = {
+        // URL you want to redirect back to. The domain (www.example.com) for this
+        // URL must be whitelisted in the Firebase Console.
+        url: 'https://localhost:3000/finishSignUp?cartId=1234',
+        // This must be true.
+        handleCodeInApp: false,
+    }
+
     const handleSubmit = async (event: any) => {
         event.preventDefault();
         setHandling(true)
@@ -36,7 +45,7 @@ const SignupPage: React.FC = () => {
         console.log('email = ', email)
         console.log('password = ', password)
         console.log(event.currentTarget)
-        if (event.currentTarget.checkValidity() === false || passCheck === false || usernameErr.length > 0) {
+        if (event.currentTarget.checkValidity() === false || passCheck === false || usernameErr.length > 0 || emailErr.length > 0) {
             console.log(validated);
             event.preventDefault();
             event.stopPropagation();
@@ -54,6 +63,8 @@ const SignupPage: React.FC = () => {
                         await firestore().collection('users').doc(uid).set({ name: name, username: username, actives: { 'Arts': false, 'Biology': false, 'Business': false, 'Computer Science': false, 'Economics': false, 'Finance': false, 'French': false, 'General': true, 'Humanities': false, 'Languages (General)': false, 'Mandarin': false, 'Psychology': false, 'Spanish': false, 'bulletin': true }, upvoted: [], downvoted: [], credits: 25 }).then(() => {
                             window.location.href = `/user/${username}`
                         })
+
+                        await auth().currentUser?.sendEmailVerification()
                     }
                     setValidated(true);
                 } catch (e) {
@@ -84,7 +95,13 @@ const SignupPage: React.FC = () => {
     }
 
     const handleChangeEmail = (event: any) => {
+        var check = /uchicago.edu/
         setEmail(event.target.value)
+        if (event.target.value.match(check)) {
+            setEmailErr('')
+        } else {
+            setEmailErr('uchicago.edu addresses only.')
+        }
     }
 
     const handleChangePassword = (event: any) => {
@@ -122,6 +139,9 @@ const SignupPage: React.FC = () => {
                 <Form.Group controlId="formBasicEmail">
                     <Form.Label>Email address</Form.Label>
                     <Form.Control required type="email" placeholder="jdoe@email.com" onChange={handleChangeEmail} value={email} />
+                    <Form.Text className="text-danger">
+                        {emailErr}
+                    </Form.Text>
                     <Form.Control.Feedback type="invalid">
                         Please provide an email.
                         </Form.Control.Feedback>
